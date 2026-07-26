@@ -26,3 +26,7 @@ extension/   Chrome extension (popup, service worker, offscreen document)
 server/      Express API — proxies audio to the recognition service
 docs/        Build plan and decision log
 ```
+
+## License
+
+[MIT](LICENSE) — you'll need your own AudD API token to run it.
