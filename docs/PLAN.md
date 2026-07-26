@@ -4,8 +4,6 @@ Phases are ordered so that the riskiest unknown resolves first, and so the Chrom
 review clock starts as early as possible. Each phase ends in an observable milestone —
 don't move on from a broken one.
 
-**Realistic total for Phases 0–2 (the version with real users): ~1 week.**
-
 ---
 
 ## Phase 0 — Verify the audio format
@@ -31,11 +29,11 @@ Two hours now beats losing day three.
 **Milestone:** a real song correctly identified from a `.webm` clip via curl.
 
 **Gate:** accepted → continue as planned. Rejected → add ffmpeg, switch to a container host,
-budget an extra half day.
+and budget extra time.
 
 ---
 
-## Phase 1A — Scaffold + build config (~2–3 hrs)
+## Phase 1A — Scaffold + build config
 
 **Goal:** an empty but loadable extension with all three contexts wired.
 
@@ -58,7 +56,7 @@ logs on install.
 
 ---
 
-## Phase 1B — Capture pipeline (~3–5 hrs, hardest part)
+## Phase 1B — Capture pipeline (hardest part)
 
 1. Popup → `sendMessage({type:'START_CAPTURE'})`
 2. SW → `chrome.tabCapture.getMediaStreamId({ targetTabId })` (returns a ticket, not a stream)
@@ -77,7 +75,7 @@ with no audio playing.
 
 ---
 
-## Phase 1C — Express proxy (~2–3 hrs)
+## Phase 1C — Express proxy
 
 ```
 server/src/
@@ -104,7 +102,7 @@ on reload), lock down before submission.
 
 ---
 
-## Phase 1D — Wire up + error states (~3–4 hrs)
+## Phase 1D — Wire up + error states
 
 Popup state machine: `idle → recording → identifying → result | no-match | error`.
 
@@ -123,7 +121,7 @@ a real edge case.
 
 ---
 
-## Phase 2 — Ship it (~half a day + review wait)
+## Phase 2 — Ship it
 
 - `express-rate-limit` per IP (~10/hr, 50/day) **plus** a global daily circuit breaker so
   quota abuse fails closed rather than generating a bill
@@ -139,7 +137,7 @@ can't be sped up. Updates can ship while it's pending.
 
 ---
 
-## Phase 3 — History (~half a day)
+## Phase 3 — History
 
 Identity without login: generate a UUID on install, store in `chrome.storage.local`, send as
 a header.
@@ -159,14 +157,14 @@ Compound index `{ deviceId: 1, identifiedAt: -1 }` matching the access pattern.
 
 ---
 
-## Phase 4 — Spotify OAuth (1–2 days)
+## Phase 4 — Spotify OAuth
 
 - `chrome.identity.launchWebAuthFlow`, redirect URI `https://<ext-id>.chromiumapp.org/`
 - **Authorization Code + PKCE** — extensions cannot hold a client secret
 - Scopes: `playlist-modify-private playlist-modify-public`
 - Access tokens expire hourly; needs refresh handling
 
-**Check before committing two days:** Spotify apps start in development mode, capped at 25
+**Check before committing to this:** Spotify apps start in development mode, capped at 25
 manually-allowlisted users until a quota extension is granted. Great interview demo, not a
 public feature on day one.
 

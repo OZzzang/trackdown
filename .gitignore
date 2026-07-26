@@ -17,6 +17,9 @@ npm-debug.log*
 # Scratch / spike work
 scratch/
 
+# Local-only notes — schedules and working notes that shouldn't be public
+*.local.md
+
 # OS
 .DS_Store
 Thumbs.db
