@@ -14,8 +14,15 @@ build/
 *.log
 npm-debug.log*
 
-# Scratch / spike work
-scratch/
+# Captured audio — never commit. Large, and the privacy policy promises we don't retain it.
+*.webm
+*.mp3
+*.wav
+*.m4a
+*.ogg
+
+# scratch/ IS tracked: the Phase 0 spike rigs are the evidence behind docs/DECISIONS.md,
+# and they need to travel between dev machines. Only their audio output is ignored, above.
 
 # Local-only notes — schedules and working notes that shouldn't be public
 *.local.md

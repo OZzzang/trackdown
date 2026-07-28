@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>TrackDown — Q3 mix rig</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, sans-serif;
+         max-width: 46rem; margin: 2rem auto; padding: 0 1.25rem; }
+  h1 { font-size: 1.3rem; margin-bottom: .25rem; }
+  .sub { opacity: .7; margin-top: 0; }
+  fieldset { border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+             border-radius: 8px; padding: .9rem 1rem; margin: 1rem 0; }
+  legend { padding: 0 .4rem; font-weight: 600; font-size: .85rem;
+           text-transform: uppercase; letter-spacing: .04em; opacity: .75; }
+  button { font: inherit; padding: .5rem 1.1rem; border-radius: 6px; cursor: pointer;
+           border: 1px solid color-mix(in srgb, currentColor 35%, transparent);
+           background: color-mix(in srgb, currentColor 8%, transparent); }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  .preset { padding: .35rem .7rem; font-size: .85rem; margin: .15rem .2rem 0 0; }
+  input[type=range] { width: 16rem; vertical-align: middle; }
+  .row { margin: .5rem 0; }
+  .row label { display: inline-block; width: 5.5rem; }
+  .val { font-variant-numeric: tabular-nums; opacity: .8; margin-left: .5rem; }
+  #status { margin: 1rem 0; padding: .7rem .9rem; border-radius: 6px; min-height: 1.5em;
+            background: color-mix(in srgb, currentColor 7%, transparent); }
+  #status.err { background: color-mix(in srgb, #e5484d 18%, transparent); }
+  #status.ok  { background: color-mix(in srgb, #30a46c 18%, transparent); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin-top: 1rem; }
+  th, td { text-align: left; padding: .4rem .5rem;
+           border-bottom: 1px solid color-mix(in srgb, currentColor 15%, transparent); }
+  th { font-weight: 600; opacity: .7; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .87em;
+         background: color-mix(in srgb, currentColor 10%, transparent);
+         padding: .1em .35em; border-radius: 3px; }
+  audio { height: 32px; vertical-align: middle; }
+  ol { padding-left: 1.2rem; } li { margin: .3rem 0; }
+</style>
+</head>
+<body>
+
+<h1>Q3 mix rig</h1>
+<p class="sub">Same song, same seconds, one variable: how loud the speech is.</p>
+
+<fieldset>
+  <legend>Inputs</legend>
+  <div class="row">
+    <label>Music</label>
+    <input type="file" id="fileMusic" accept="audio/*">
+    <span class="val" id="infoMusic">—</span>
+  </div>
+  <div class="row">
+    <label>Speech</label>
+    <input type="file" id="fileSpeech" accept="audio/*">
+    <span class="val" id="infoSpeech">—</span>
+  </div>
+  <p class="sub">Music: a tab-capture clip you already know AudD matches.
+     Speech: mic clip of you talking, recorded in silence. Both from <code>spike.html</code>.</p>
+</fieldset>
+
+<fieldset>
+  <legend>Mix</legend>
+  <div class="row">
+    <label>Music</label>
+    <input type="range" id="gainMusic" min="0" max="100" value="100">
+    <span class="val" id="valMusic">100%</span>
+  </div>
+  <div class="row">
+    <label>Speech</label>
+    <input type="range" id="gainSpeech" min="0" max="100" value="0">
+    <span class="val" id="valSpeech">0%</span>
+  </div>
+  <div class="row">
+    <span class="sub">Sweep:</span>
+    <button class="preset" data-speech="0">0% (control)</button>
+    <button class="preset" data-speech="25">25%</button>
+    <button class="preset" data-speech="50">50%</button>
+    <button class="preset" data-speech="75">75%</button>
+    <button class="preset" data-speech="100">100%</button>
+  </div>
+</fieldset>
+
+<fieldset>
+  <legend>Length</legend>
+  <label><input type="radio" name="secs" value="3"> 3s</label>
+  <label><input type="radio" name="secs" value="5"> 5s</label>
+  <label><input type="radio" name="secs" value="8" checked> 8s</label>
+  <label><input type="radio" name="secs" value="10"> 10s</label>
+</fieldset>
+
+<button id="go" disabled>Render + download mix</button>
+<label style="margin-left:1rem"><input type="checkbox" id="monitor" checked> play aloud while rendering</label>
+
+<div id="status">Load both files.</div>
+
+<table id="runs" hidden>
+  <thead><tr><th>File</th><th>Speech</th><th>Size</th><th>Listen</th></tr></thead>
+  <tbody></tbody>
+</table>
+
+<fieldset>
+  <legend>How to use</legend>
+  <ol>
+    <li>Start at <b>0% speech</b> — that must match, or your music clip is bad and nothing
+        below it means anything.</li>
+    <li>Walk up the presets. The level where AudD flips to <code>found:false</code> is the answer to Q3.</li>
+    <li>Each render downloads as <code>mix-speech50-8s.webm</code> — the ratio is in the filename,
+        so results stay traceable.</li>
+    <li>Identify each one:
+        <code>./identify.sh ~/Downloads/mix-speech50-8s.webm | node parse.js</code></li>
+  </ol>
+</fieldset>
+
+<script>
+const $ = s => document.querySelector(s);
+const ctx = new AudioContext();
+const buffers = { music: null, speech: null };
+
+const goBtn = $('#go'), statusEl = $('#status'), runsEl = $('#runs');
+const say = (m, c = '') => { statusEl.textContent = m; statusEl.className = c; };
+
+// ---- load + decode -------------------------------------------------------
+// A fixed-bitrate webm is ~128K per 8s whether it holds speech or silence, so file size
+// proves nothing. Measure the actual signal instead: a dead mic reads below -70 dB.
+function levelDb(buf) {
+  const d = buf.getChannelData(0);
+  let sum = 0;
+  for (let i = 0; i < d.length; i++) sum += d[i] * d[i];
+  return 20 * Math.log10(Math.sqrt(sum / d.length) || 1e-9);
+}
+
+async function load(which, input, infoEl) {
+  const file = input.files[0];
+  if (!file) return;
+  say(`Decoding ${which}…`);
+  try {
+    const buf = await ctx.decodeAudioData(await file.arrayBuffer());
+    buffers[which] = buf;
+    const db = levelDb(buf);
+    const dead = db < -70;
+    infoEl.textContent = `${buf.duration.toFixed(1)}s · ${db.toFixed(1)} dB RMS`
+      + (dead ? '  ⚠ SILENT' : '');
+    infoEl.style.color = dead ? '#e5484d' : '';
+  } catch {
+    buffers[which] = null;
+    infoEl.textContent = 'decode failed';
+    say(`Could not decode ${which}. Is it really audio?`, 'err');
+    return;
+  }
+  const ready = buffers.music && buffers.speech;
+  goBtn.disabled = !ready;
+  say(ready ? 'Ready. Start with 0% speech as your control.' : 'Load both files.');
+}
+
+$('#fileMusic').addEventListener('change', e => load('music', e.target, $('#infoMusic')));
+$('#fileSpeech').addEventListener('change', e => load('speech', e.target, $('#infoSpeech')));
+
+// ---- sliders -------------------------------------------------------------
+const bind = (slider, out) => {
+  const sync = () => out.textContent = `${slider.value}%`;
+  slider.addEventListener('input', sync); sync();
+};
+bind($('#gainMusic'), $('#valMusic'));
+bind($('#gainSpeech'), $('#valSpeech'));
+
+document.querySelectorAll('.preset').forEach(b => b.addEventListener('click', () => {
+  $('#gainSpeech').value = b.dataset.speech;
+  $('#gainSpeech').dispatchEvent(new Event('input'));
+}));
+
+// ---- render --------------------------------------------------------------
+// Both sources are wired through their own gain into one MediaStreamDestination,
+// so MediaRecorder captures the blend directly — no tab capture, no speakers, no air.
+function source(buf, gain, loop) {
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  src.loop = loop;                       // speech loops so it never leaves a silent gap
+  const g = ctx.createGain();
+  g.gain.value = gain;
+  src.connect(g);
+  return { src, g };
+}
+
+async function render() {
+  // Browsers start AudioContexts suspended until a user gesture.
+  if (ctx.state === 'suspended') await ctx.resume();
+
+  const secs = Number(document.querySelector('input[name="secs"]:checked').value);
+  const mGain = Number($('#gainMusic').value) / 100;
+  const sGain = Number($('#gainSpeech').value) / 100;
+  const speechPct = $('#gainSpeech').value;
+
+  if (buffers.music.duration < secs) {
+    say(`Music clip is only ${buffers.music.duration.toFixed(1)}s — pick a shorter length.`, 'err');
+    return;
+  }
+
+  goBtn.disabled = true;
+  const dest = ctx.createMediaStreamDestination();
+  const rec = new MediaRecorder(dest.stream, { mimeType: 'audio/webm;codecs=opus' });
+  const chunks = [];
+  rec.ondataavailable = e => e.data.size && chunks.push(e.data);
+
+  const music = source(buffers.music, mGain, false);
+  const speech = source(buffers.speech, sGain, true);
+
+  for (const { g } of [music, speech]) {
+    g.connect(dest);
+    if ($('#monitor').checked) g.connect(ctx.destination);
+  }
+
+  rec.onstop = () => {
+    music.src.stop(); speech.src.stop();
+    const blob = new Blob(chunks, { type: rec.mimeType });
+    // Both gains in the name — the music level is the axis that matters, so a filename
+    // carrying only the speech level would make runs impossible to tell apart.
+    const name = `mix-m${$('#gainMusic').value}-s${speechPct}-${secs}s.webm`;
+    const url = URL.createObjectURL(blob);
+    Object.assign(document.createElement('a'), { href: url, download: name }).click();
+
+    runsEl.hidden = false;
+    const tr = runsEl.tBodies[0].insertRow(0);
+    tr.innerHTML = `<td>${name}</td><td>${speechPct}%</td>
+      <td>${(blob.size / 1024).toFixed(0)} KB</td>
+      <td><audio controls src="${url}"></audio></td>`;
+
+    say(`Saved ${name}. Now identify it.`, 'ok');
+    goBtn.disabled = false;
+  };
+
+  // Small lead-in so both sources begin on exactly the same tick.
+  const at = ctx.currentTime + 0.1;
+  rec.start();
+  music.src.start(at);
+  speech.src.start(at);
+  say(`Rendering ${secs}s at ${speechPct}% speech…`);
+  setTimeout(() => rec.state !== 'inactive' && rec.stop(), (secs + 0.1) * 1000);
+}
+
+goBtn.addEventListener('click', render);
+</script>
+
+</body>
+</html>

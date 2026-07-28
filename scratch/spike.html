@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>TrackDown — Phase 0 spike</title>
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, sans-serif;
+    max-width: 46rem; margin: 2rem auto; padding: 0 1.25rem;
+  }
+  h1 { font-size: 1.3rem; margin-bottom: .25rem; }
+  .sub { opacity: .7; margin-top: 0; }
+  fieldset { border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+             border-radius: 8px; padding: .9rem 1rem; margin: 1rem 0; }
+  legend { padding: 0 .4rem; font-weight: 600; font-size: .85rem;
+           text-transform: uppercase; letter-spacing: .04em; opacity: .75; }
+  label { margin-right: 1rem; white-space: nowrap; }
+  button { font: inherit; padding: .5rem 1.1rem; border-radius: 6px; cursor: pointer;
+           border: 1px solid color-mix(in srgb, currentColor 35%, transparent);
+           background: color-mix(in srgb, currentColor 8%, transparent); }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  #status { margin: 1rem 0; padding: .7rem .9rem; border-radius: 6px; min-height: 1.5em;
+            background: color-mix(in srgb, currentColor 7%, transparent); }
+  #status.err { background: color-mix(in srgb, #e5484d 18%, transparent); }
+  #status.ok  { background: color-mix(in srgb, #30a46c 18%, transparent); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+  th, td { text-align: left; padding: .4rem .5rem;
+           border-bottom: 1px solid color-mix(in srgb, currentColor 15%, transparent); }
+  th { font-weight: 600; opacity: .7; }
+  td.num { font-variant-numeric: tabular-nums; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .87em;
+         background: color-mix(in srgb, currentColor 10%, transparent);
+         padding: .1em .35em; border-radius: 3px; }
+  audio { height: 32px; vertical-align: middle; }
+  ol { padding-left: 1.2rem; }
+  li { margin: .3rem 0; }
+</style>
+</head>
+<body>
+
+<h1>TrackDown — Phase 0 spike</h1>
+<p class="sub">Throwaway. Records a clip, downloads <code>.webm</code>, then you curl it at AudD.</p>
+
+<fieldset>
+  <legend>Source</legend>
+  <label><input type="radio" name="src" value="tab" checked> Tab audio <span class="sub">(closest to <code>tabCapture</code>)</span></label>
+  <label><input type="radio" name="src" value="mic"> Microphone</label>
+</fieldset>
+
+<fieldset>
+  <legend>Clip length</legend>
+  <label><input type="radio" name="secs" value="3"> 3s</label>
+  <label><input type="radio" name="secs" value="5"> 5s</label>
+  <label><input type="radio" name="secs" value="8" checked> 8s</label>
+  <label><input type="radio" name="secs" value="10"> 10s</label>
+</fieldset>
+
+<button id="go">Record</button>
+<span class="sub" id="mime"></span>
+
+<div id="status">Ready.</div>
+
+<table id="clips" hidden>
+  <thead><tr><th>Clip</th><th>Len</th><th>Size</th><th>Type</th><th>Play</th><th></th></tr></thead>
+  <tbody></tbody>
+</table>
+
+<fieldset>
+  <legend>How to use</legend>
+  <ol>
+    <li><b>Tab audio:</b> pick a tab in the share dialog and tick <b>“Also share tab audio.”</b>
+        Chrome only offers that checkbox for tab/screen shares, not windows.</li>
+    <li>Test the real case — a vlog or Reel with <b>speech over the music</b>, not a clean track.
+        That hit rate is the number that matters (PLAN.md Phase 0, Q3).</li>
+    <li>Clips auto-download. Then: <code>AUDD_TOKEN=… ./identify.sh clip-*.webm</code></li>
+    <li>Record findings in <code>docs/DECISIONS.md</code> under the pending Phase 0 entry.</li>
+  </ol>
+</fieldset>
+
+<script>
+const $ = s => document.querySelector(s);
+const goBtn = $('#go'), statusEl = $('#status'), tableEl = $('#clips'), tbodyEl = tableEl.tBodies[0];
+
+const PREFERRED = 'audio/webm;codecs=opus';
+
+// The whole point of Phase 0 is what Chrome actually hands us, so surface it up front.
+const supported = window.MediaRecorder && MediaRecorder.isTypeSupported(PREFERRED);
+$('#mime').textContent = supported
+  ? `${PREFERRED} supported`
+  : 'audio/webm;codecs=opus NOT supported — note this';
+
+function say(msg, cls = '') { statusEl.textContent = msg; statusEl.className = cls; }
+const pick = name => document.querySelector(`input[name="${name}"]:checked`).value;
+
+async function getStream(source) {
+  if (source === 'mic') {
+    return navigator.mediaDevices.getUserMedia({ audio: true });
+  }
+  // getDisplayMedia won't return audio without a video track requested alongside it.
+  const s = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+  if (!s.getAudioTracks().length) {
+    s.getTracks().forEach(t => t.stop());
+    throw new Error('No audio track — re-share and tick "Also share tab audio".');
+  }
+  return s;
+}
+
+async function record() {
+  const source = pick('src');
+  const secs = Number(pick('secs'));
+  goBtn.disabled = true;
+
+  let stream;
+  try {
+    stream = await getStream(source);
+  } catch (err) {
+    say(err.name === 'NotAllowedError' ? 'Permission denied / share cancelled.' : err.message, 'err');
+    goBtn.disabled = false;
+    return;
+  }
+
+  // Video track would land in the container and inflate the upload; drop it.
+  const audioOnly = new MediaStream(stream.getAudioTracks());
+  const rec = new MediaRecorder(audioOnly, supported ? { mimeType: PREFERRED } : {});
+  const chunks = [];
+  rec.ondataavailable = e => e.data.size && chunks.push(e.data);
+
+  const started = performance.now();
+
+  rec.onstop = () => {
+    const elapsed = (performance.now() - started) / 1000;
+    // Stop every track or Chrome keeps the sharing/recording indicator up.
+    stream.getTracks().forEach(t => t.stop());
+
+    const blob = new Blob(chunks, { type: rec.mimeType });
+    const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const name = `clip-${source}-${secs}s-${ts}.webm`;
+
+    const url = URL.createObjectURL(blob);
+    Object.assign(document.createElement('a'), { href: url, download: name }).click();
+
+    addRow({ name, elapsed, blob, url });
+    say(`Saved ${name} — ${(blob.size / 1024).toFixed(0)} KB, ${elapsed.toFixed(2)}s actual.`, 'ok');
+    goBtn.disabled = false;
+  };
+
+  rec.start();
+  say(`Recording ${secs}s from ${source}…`);
+  setTimeout(() => rec.state !== 'inactive' && rec.stop(), secs * 1000);
+}
+
+function addRow({ name, elapsed, blob, url }) {
+  tableEl.hidden = false;
+  const tr = tbodyEl.insertRow(0);
+  tr.innerHTML = `
+    <td>${name}</td>
+    <td class="num">${elapsed.toFixed(2)}s</td>
+    <td class="num">${(blob.size / 1024).toFixed(0)} KB</td>
+    <td><code>${blob.type || '?'}</code></td>
+    <td><audio controls src="${url}"></audio></td>
+    <td><a href="${url}" download="${name}">re-download</a></td>`;
+}
+
+goBtn.addEventListener('click', record);
+</script>
+
+</body>
+</html>
