@@ -25,6 +25,7 @@ _TBD — added at Phase 1A._
 extension/   Chrome extension (popup, service worker, offscreen document)
 server/      Express API — proxies audio to the recognition service
 docs/        Build plan and decision log
+scratch/     Planning and testing APIs before building out core features
 ```
 
 ## License
