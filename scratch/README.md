@@ -45,8 +45,19 @@ PROVIDER=acr ./scratch/batch.sh ~/Downloads/known/*.webm
 `spike.html` and `mix.html` open straight from disk — no server needed:
 
 ```bash
-open -a "Google Chrome" scratch/spike.html
+open -a "Google Chrome" scratch/spike.html   # macOS
+start chrome scratch\spike.html              # Windows
 ```
+
+## On Windows
+
+The two `.html` rigs are pure browser code and work anywhere Chrome does. The shell scripts
+need **Git Bash** (ships with Git for Windows) or **WSL** — they will not run in PowerShell
+or `cmd`. You also need `node` and `jq` (`winget install jqlang.jq`).
+
+Scripts are written to POSIX rather than BSD syntax so they behave the same on macOS,
+Linux and Git Bash, and `.gitattributes` pins them to LF endings so a Windows checkout
+doesn't break bash with CRLF.
 
 ## Method notes
 

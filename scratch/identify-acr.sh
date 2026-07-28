@@ -33,7 +33,7 @@ SIGNATURE=$(printf '%s' "$STRING_TO_SIGN" \
 RESPONSE=$(curl -sS -X POST "https://${ACR_HOST}${URI}" \
   -w '\n{"_http":%{http_code},"_seconds":%{time_total}}' \
   -F "sample=@${FILE}" \
-  -F "sample_bytes=$(stat -f%z "$FILE")" \
+  -F "sample_bytes=$(wc -c < "$FILE" | tr -d '[:space:]')" \
   -F "access_key=${ACR_ACCESS_KEY}" \
   -F "data_type=audio" \
   -F "signature_version=1" \

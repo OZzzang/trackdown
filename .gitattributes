@@ -1,0 +1,11 @@
+# Shell scripts must keep LF endings. A default Windows checkout converts to CRLF, which
+# bash rejects with "\r: command not found" — or worse, silently breaks the shebang.
+*.sh text eol=lf
+
+# Normalize everything else in the repo to LF in the object store.
+* text=auto
+
+# Audio is binary if any ever gets committed deliberately (it is gitignored by default).
+*.webm binary
+*.mp3  binary
+*.wav  binary

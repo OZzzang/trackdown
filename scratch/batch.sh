@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # TrackDown Phase 0 — measure AudD's metadata error rate over a batch of clips.
 #
-#   AUDD_TOKEN must be set (set -a; source server/.env; set +a)
+#   Credentials come from server/.env (set -a; source server/.env; set +a). Which ones are
+#   required depends on PROVIDER — each identify script checks its own.
 #   ./batch.sh ~/Downloads/known/*.webm
 #
 # Name each clip after the song you expect, e.g. "baby-bieber.webm", so the expected and
@@ -9,8 +10,14 @@
 
 set -uo pipefail   # deliberately NOT -e: one bad clip must not abort the run
 
-: "${AUDD_TOKEN:?Set AUDD_TOKEN (set -a; source server/.env; set +a)}"
 [ $# -gt 0 ] || { echo "Usage: ./batch.sh <clip.webm> [more.webm …]" >&2; exit 1; }
+
+# Unlike identify.sh, this one cannot degrade without jq — it reads fields out of the
+# response to build the table. Fail with a useful message rather than empty rows.
+command -v jq >/dev/null 2>&1 || {
+  echo "jq is required for batch runs. macOS: brew install jq — Windows: winget install jqlang.jq" >&2
+  exit 1
+}
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 
