@@ -1,7 +1,6 @@
 # Decisions
 
-One entry per non-obvious call. Takes ~20 seconds to write and saves reconstructing your own
-reasoning in an interview six months later.
+One entry per non-obvious call. 
 
 Format: **Date — Decision.** What was rejected, and why.
 
