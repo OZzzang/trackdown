@@ -28,12 +28,19 @@ Never write them into the service worker — it has no `window`, so they are und
 ## Hard rules
 
 - **Manifest V3 only.** Most Chrome extension code online is V2, looks plausible, and will not work.
-- The AudD token lives in `server/.env`. It must never appear anywhere under `extension/` —
-  extension source is fully public once shipped.
+- Provider credentials live in `server/.env`. They must never appear anywhere under
+  `extension/` — extension source is fully public once shipped.
 - The popup is a stateless renderer. Durable state goes in `chrome.storage.session`
   (or `chrome.storage.local` for the install-time device UUID).
-- Provider-specific code stays inside `server/src/services/audd.js`. Routes speak our own
-  normalized shape, never AudD's raw response.
+- **The fingerprinting provider is a config value, not a dependency.** `PROVIDER` selects
+  `services/audd.js` (development) or `services/acrcloud.js` (production). Provider-specific
+  field names stay inside that one file; nothing above `services/` may know which one
+  answered. Routes speak our normalized shape only.
+- Providers differ, and those differences are the normalizer's problem, not the UI's:
+  ACRCloud returns no artwork and no Apple Music URL but does return a confidence score.
+  Fill missing artwork server-side from the Spotify track ID, keep `confidence` optional
+  and null for AudD, and hedge result copy unconditionally rather than keying off a score
+  only one provider supplies.
 - "Song not found" is a *successful* request: `200 { found: false }`. Not a 404.
 - Never write captured audio to disk. The privacy policy promises we don't retain it.
 - Vite output must not be content-hashed — `manifest.json` references files by exact path.
@@ -46,7 +53,12 @@ _TBD — filled in at Phase 1A._
 
 ## Current phase
 
-**Phase 0** — verifying AudD accepts `webm/opus`. See `docs/PLAN.md`.
+**Phase 1A** — scaffold and build config. Phase 0 is complete; see `docs/DECISIONS.md`.
 
-Everything below Phase 0 is provisional until that resolves: if AudD rejects the format,
-the server needs an ffmpeg transcode step and a container-based host.
+Settled in Phase 0: AudD accepts `webm/opus` untranscoded (no ffmpeg, no container host),
+speech over music is not a failure mode, and the round trip is ~1s. **Capture length is 5s,
+not the 8s written throughout `PLAN.md`.**
+
+One finding constrains Phase 1D: AudD returns no confidence score, and has been observed
+matching audio correctly while reporting the wrong title from a mislabeled compilation
+entry. Results must not be presented to the user as certain.

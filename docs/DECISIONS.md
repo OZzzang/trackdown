@@ -37,5 +37,125 @@ extra store scrutiny.
 
 ---
 
-**Pending — Phase 0 result.** Does AudD accept `webm/opus` without transcoding? What clip
-length works? What's the hit rate with speech over the music? Record here before Phase 1A.
+**2026-07-27 — Phase 0 gate cleared: AudD accepts `webm/opus` untranscoded.**
+A clip straight out of Chrome's `MediaRecorder` matched on the first attempt. The
+contingency — ffmpeg transcode step, container-based host, extra deploy complexity — is
+not needed and is dropped. Phase 1C stays a plain Express proxy.
+
+**2026-07-27 — The user waits on the capture, not the network.**
+Round trip to AudD measured 0.43–1.29s across runs. The 8s recording dominates perceived
+latency by roughly an order of magnitude. So the Phase 1D progress state belongs on the
+recording phase, not on the request, and shortening the clip is the only real speed lever.
+
+**2026-07-27 — AudD can return a correct fingerprint with wrong metadata. Design for it.**
+Bieber's "Baby" resolves to "Take Your Mama" by Scissor Sisters — identically across two
+different 10s windows (verified as distinct files by checksum). Identical output from
+different input is the signature of a correctly matched but *mislabeled* database entry,
+not a fingerprint collision. Every match so far has landed on a party compilation
+("Pop Party 13", "The Playlist: New Year's Party"), and an otherwise-correct All Of Me
+match returned an Apple Music link to a Tiësto remix while Spotify pointed elsewhere.
+
+No `score` field is returned, so there is nothing to threshold on — the server cannot tell
+a good result from a bad one.
+
+Cross-provider disagreement was considered as a confidence proxy and **rejected**: on the
+Baby result, AudD's own title, the Spotify link and the Apple link all agreed on the wrong
+song. Providers inherit the error because AudD resolves to one entry and then looks that
+entry up in each of them. The error is also systematic per track — two different 10s
+windows returned identical output — so re-querying or sampling a different section cannot
+detect it either. No internal consistency check works.
+
+That leaves two real options: query a second provider (ACRCloud) for a genuine second
+opinion, at double the cost and complexity, or design the UI so the user can verify
+cheaply. Taking the second for v1 — the user just heard the song and has the video in
+front of them, which is a verification path Shazam does not have.
+
+---
+
+**2026-07-27 — Q3 answered: speech over music is not a failure mode.**
+Measured with `scratch/mix.html`, which mixes a known-matching clip against a speech track
+at controlled gains rather than relying on found footage. Matched at parity (music and
+speech both ≈ −23 dB), at −12 dB (typical vlog mix), and at −20 dB (quiet background
+music). Every render verified as a distinct file by checksum.
+
+The fingerprint tolerates considerably worse than real content presents, so the two vlog
+misses seen during testing were **not** caused by the speech overlay. The likely cause is
+unindexed stock/royalty-free library music (Epidemic Sound, Artlist and similar), which is
+a catalogue limit rather than a signal-quality one. Phase 1D no-match copy should therefore
+say the track may not be in the database — not suggest trying a cleaner or quieter section,
+which would be misleading advice.
+
+Rejected the obvious approach of testing against real vlogs: every sample varies on three
+axes at once (is the track indexed, how loud is the music, how much noise sits on top), so
+results are anecdotes rather than measurements.
+
+**2026-07-27 — Q2 answered: 3s matches, but capture is set to 5s.**
+At a realistic vlog mix (music 12 dB under speech), 8s, 5s and 3s all matched. Round trip
+fell from 1.28s to 0.56s as the upload shrank, so a shorter clip wins twice — less time
+recording *and* less time uploading.
+
+Chose 5s over 3s. The 3s result comes from the chorus of one song, which is the strongest
+possible fingerprint: dense, distinctive, high-energy. Users click whenever they happen to
+hear something, frequently a sparse intro or a bridge, where a 3s window has far less to
+work with. 5s keeps well clear of the proven floor while still cutting perceived latency
+by ~37% against the original 8s.
+
+Rejected keeping 8s: latency is capture-bound, and three seconds is the difference between
+a tool that feels instant and one that feels broken.
+
+Revisit with real usage data, or sooner by testing a *verse* from a second song at 3s and
+5s — the weak case this measurement did not cover.
+
+---
+
+**2026-07-27 — AudD in development, ACRCloud in production. Provider is a config value.**
+ACRCloud is clearly the better provider (see the measurement below) but bills a $50 minimum
+up front, which is hard to justify before the extension has a single user. So development
+runs on AudD's free tier and `PROVIDER` switches to ACRCloud before the Phase 2 deploy.
+
+Rejected renaming `services/audd.js` to `services/acrcloud.js`: both adapters ship and the
+choice becomes configuration. Rejected shipping v1 entirely on AudD: a 20% confidently-wrong
+rate is the one failure users punish, and $50 is easy to justify once the thing is real.
+
+The risk this creates is dev/prod divergence — testing a path you don't ship. Neutralized by
+pushing every provider difference into the normalizer: artwork fetched server-side from the
+Spotify track ID when the provider omits it, `confidence` optional and null for AudD, and
+result copy hedged unconditionally rather than keyed off a score only one provider returns.
+Nothing above `services/` can tell which provider answered.
+
+**Pre-launch checklist:** buy ACRCloud several days before deploying, not the day of. Run
+`PROVIDER=acr scratch/batch.sh` plus a full end-to-end pass through the real server.
+ACRCloud must never be exercised for the first time in production.
+
+**2026-07-27 — ACRCloud measured 10/10 against AudD's 6/10.**
+Measured both providers against the same ten clips — same songs, same sections, same audio,
+vendor as the only variable.
+
+| | AudD | ACRCloud |
+|---|---|---|
+| Correct | 6/10 | **10/10** |
+| Confidently wrong | 2 | 0 |
+| No match | 2 | 0 |
+| Confidence score | none | yes |
+| Album metadata | party compilations | canonical releases |
+| Accepts `webm/opus` | yes | yes |
+
+ACRCloud fixed both of AudD's misses (7 Years, YOASOBI) and both of its wrong answers
+(Umbrella → "Def Jam UK Mix 1", Mockingbird → "Top 5 Eminem live performances by NiYove").
+
+Costs of the switch, accepted: HMAC request signing instead of a bearer token (already
+written and verified in `scratch/identify-acr.sh`), and no artwork or Apple Music URL in
+the response — cover art must be fetched server-side from the Spotify track ID.
+
+Pricing checked: ACRCloud bills a $50 minimum, pay-as-you-go. That cost is what produced the
+dev/prod split recorded above rather than an outright switch. The isolation rule from the
+AudD entry is what kept the option open at all — and resolving this before `server/` exists
+means it costs a config value instead of a refactor.
+
+---
+
+**Phase 0 complete.** All four questions answered, the gate cleared on Q1, and the provider
+choice re-decided on evidence. Spike rigs live in `scratch/` (gitignored): `spike.html`
+captures clips, `mix.html` builds controlled mixes, `identify.sh` / `identify-acr.sh` query
+the two providers, `parse.js` / `parse-acr.js` normalize both to one contract, and
+`batch.sh` runs a folder of clips against either (`PROVIDER=acr`).
