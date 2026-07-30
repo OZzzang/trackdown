@@ -79,11 +79,16 @@ never runs.
 
 ## Current phase
 
-**Phase 1A** — scaffold and build config. Phase 0 is complete; see `docs/DECISIONS.md`.
+**Phase 1B** — the capture pipeline. Phases 0 and 1A are complete; see `docs/DECISIONS.md`.
+
+Phase 1A shipped a loadable extension with all three contexts wired and a working
+popup ↔ service worker message round trip. Nothing captures audio yet, and nothing creates
+the offscreen document — `offscreen.html` builds into `dist/` but is never opened until 1B.
 
 Settled in Phase 0: AudD accepts `webm/opus` untranscoded (no ffmpeg, no container host),
-speech over music is not a failure mode, and the round trip is ~1s. **Capture length is 5s,
-not the 8s written throughout `PLAN.md`.**
+speech over music is not a failure mode, and the round trip is ~1s. **Capture length is 5s.**
+`PLAN.md` still says 8s in its Phase 0 section — that is the historical record of what the
+spike recorded, not a spec.
 
 One finding constrains Phase 1D: AudD returns no confidence score, and has been observed
 matching audio correctly while reporting the wrong title from a mislabeled compilation
