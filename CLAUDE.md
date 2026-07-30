@@ -2,7 +2,7 @@
 
 Chrome extension (Manifest V3) that identifies the background song playing in a browser tab.
 
-Flow: user clicks the icon → 8s of tab audio captured → POSTed to our Express proxy →
+Flow: user clicks the icon → 5s of tab audio captured → POSTed to our Express proxy →
 forwarded to AudD → normalized song metadata returned to the popup.
 
 ## Stack
@@ -49,7 +49,33 @@ Never write them into the service worker — it has no `window`, so they are und
 
 ## Commands
 
-_TBD — filled in at Phase 1A._
+From `extension/`:
+
+| Command | Does |
+|---|---|
+| `npm run build` | Build to `extension/dist/`, then verify exact-path references |
+| `npm run dev` | Same, rebuilding on change |
+| `npm run verify` | Check `dist/` against the paths `manifest.json` hardcodes |
+
+Server commands: _TBD at Phase 1C._
+
+## Extension build layout
+
+Chrome loads **`extension/dist/`** — the build output — not `extension/`. There is no hot
+reload; hit the reload icon on the card at `chrome://extensions` after every rebuild.
+
+Two placements exist to keep the dist root flat, because everything in it is addressed by
+exact path:
+
+- `public/manifest.json` — Vite copies `public/` to the dist root verbatim, so the manifest
+  lands next to the files it references without pulling in a copy plugin.
+- `popup.html` / `offscreen.html` live at the **extension root**, not beside their JS. Vite
+  emits an HTML entry at its path relative to the project root, so putting them in
+  `src/popup/` would emit `dist/src/popup/index.html` — build output that reads like source.
+
+`npm run verify` runs after every build and fails it if anything referenced by exact path
+is missing. That failure is otherwise silent: the extension still loads, the worker just
+never runs.
 
 ## Current phase
 

@@ -64,14 +64,14 @@ logs on install.
 4. SW → send ticket to offscreen
 5. Offscreen → `getUserMedia` with `chromeMediaSource: 'tab'` constraints
 6. Offscreen → **AudioContext passthrough immediately**, or the user's audio goes silent
-7. Offscreen → `MediaRecorder`, 8s, assemble Blob
+7. Offscreen → `MediaRecorder`, 5s, assemble Blob
 8. Offscreen → `stream.getTracks().forEach(t => t.stop())` or the recording indicator sticks
 9. Offscreen → `fetch` the Blob to the server directly
 
 **Known failures to handle:** `chrome://` pages, the Web Store, the PDF viewer, and tabs
 with no audio playing.
 
-**Milestone:** clicking while YouTube plays yields an 8s Blob with zero audio interruption.
+**Milestone:** clicking while YouTube plays yields a 5s Blob with zero audio interruption.
 
 ---
 
