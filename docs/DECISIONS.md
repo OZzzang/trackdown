@@ -154,7 +154,49 @@ means it costs a config value instead of a refactor.
 ---
 
 **Phase 0 complete.** All four questions answered, the gate cleared on Q1, and the provider
-choice re-decided on evidence. Spike rigs live in `scratch/` (gitignored): `spike.html`
+choice re-decided on evidence. Spike rigs live in `scratch/`, which is tracked — they are the
+evidence behind the entries above, and only their audio output is ignored. `spike.html`
 captures clips, `mix.html` builds controlled mixes, `identify.sh` / `identify-acr.sh` query
 the two providers, `parse.js` / `parse-acr.js` normalize both to one contract, and
 `batch.sh` runs a folder of clips against either (`PROVIDER=acr`).
+
+---
+
+**2026-07-30 — Vite content hashing disabled, and a build guard added to keep it that way.**
+`manifest.json` names `service-worker.js` by exact path, and the worker will name
+`offscreen.html` the same way in 1B. Vite's default `[name].[hash].js` breaks both without
+throwing: the extension still loads and the worker simply never runs, which reads as "my code
+does nothing" rather than as a build error.
+
+Overriding `entryFileNames` fixes it, but nothing stops the setting being lost later, so
+`extension/scripts/verify-dist.js` re-resolves every exact path after each build and fails
+the build when one is missing. Negative-tested by renaming `service-worker.js` to
+`service-worker.a1b2c3.js` and confirming a non-zero exit.
+
+Two layout choices follow from the same constraint. `manifest.json` lives in `public/`, which
+Vite copies to the dist root verbatim — the alternative was adding `vite-plugin-static-copy`
+to move a single file. And `popup.html` / `offscreen.html` sit at the extension root rather
+than beside their JS, because Vite emits an HTML entry at its path relative to the project
+root: `src/popup/index.html` would land at `dist/src/popup/index.html`, build output that
+reads like source and a manifest path that looks uncompiled.
+
+**2026-07-30 — Phase 1C before Phase 1B. Reordered against PLAN.md.**
+`PLAN.md` orders phases riskiest-unknown-first, and labels 1B the hardest part. Taking 1C
+first anyway, because that principle is about unknowns which can force an *architecture*
+change, and 1B no longer holds one. Phase 0 retired it when AudD accepted `webm/opus`
+untranscoded. What remains in 1B — the `AudioContext` passthrough, the offscreen document
+lifecycle — is fiddly implementation that cannot change the server contract, the hosting, or
+the data flow. Deferring an unknown is a risk; deferring known-fiddly work is scheduling.
+
+The dependency also runs the other way. 1C's milestone is a `curl` command and needs no
+extension at all, while 1B's step 9 POSTs to a server that would not exist yet. Building 1C
+first removes an ordering constraint rather than creating one. The `scratch/` clips are real
+fixtures rather than approximations: `spike.html` produced them with `MediaRecorder`, the
+same encoder `tabCapture` feeds in 1B.
+
+Rejected stopping 1B one step short at "5s Blob in hand". It needs throwaway code written
+only to prove the Blob is real, and it leaves the interesting half — whether any of this
+actually identifies a song — unproven. With the server already up, 1B lands end to end.
+
+Accepted risk: if capture surprises us in a way that shifts the contract (chunking, MIME),
+the server needs a tweak. Low, because Phase 0 measured the format directly.

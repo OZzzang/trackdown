@@ -79,7 +79,11 @@ never runs.
 
 ## Current phase
 
-**Phase 1B** — the capture pipeline. Phases 0 and 1A are complete; see `docs/DECISIONS.md`.
+**Phase 1C** — the Express proxy. Phases 0 and 1A are complete; see `docs/DECISIONS.md`.
+
+**1C and 1B are deliberately swapped** against the order in `PLAN.md`; reasoning is in
+`DECISIONS.md`. In short: 1C's milestone is a `curl` command and needs no extension at all,
+while 1B's final step POSTs to a server that would not otherwise exist yet.
 
 Phase 1A shipped a loadable extension with all three contexts wired and a working
 popup ↔ service worker message round trip. Nothing captures audio yet, and nothing creates
