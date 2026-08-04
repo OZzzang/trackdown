@@ -95,8 +95,10 @@ then normalize to our own contract:
 Status codes: `200 {found:false}` for no match, `429` rate limited, `502` upstream down.
 Never forward the raw upstream body.
 
-CORS: the extension's origin is `chrome-extension://<id>`. Allow-all in dev (the ID changes
-on reload), lock down before submission.
+CORS: the extension's origin is `chrome-extension://<id>`. Allow-all in dev — an unpacked
+extension's ID is a hash of the loaded directory's absolute path, so it is stable per machine
+but differs for anyone who clones elsewhere, and differs again from the published ID. Lock
+down before submission.
 
 **Milestone:** `curl -F "file=@clip.webm" localhost:3000/api/identify` returns clean JSON.
 

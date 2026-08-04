@@ -18,11 +18,18 @@ if (process.env.TRUST_PROXY) {
   app.set('trust proxy', Number(process.env.TRUST_PROXY));
 }
 
-// CORS. The extension's origin is chrome-extension://<id>, and that ID changes every time
-// an unpacked extension is reloaded — so dev has to allow all.
+// CORS. The extension's origin is chrome-extension://<id>. For an unpacked extension Chrome
+// derives that ID by hashing the absolute path of the loaded directory — so it is stable
+// across reloads on one machine, but differs for anyone who clones this repo somewhere else,
+// and differs again from the Web Store ID after publishing. Allowing all in dev avoids
+// baking one developer's ID into the server.
 //
-// TODO(Phase 2): lock this to the published extension ID before store submission. The ID is
-// stable once published, so there is no reason to keep this open.
+// Note this is belt-and-braces rather than load-bearing: an extension page fetching a host
+// listed in its own `host_permissions` is not subject to CORS in the first place. These
+// headers matter for curl and for any non-extension caller.
+//
+// TODO(Phase 2): lock this to the published extension ID before store submission. That ID
+// is fixed once published, so there is no reason to keep this open.
 app.use((req, res, next) => {
   res.set('Access-Control-Allow-Origin', '*');
   res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');

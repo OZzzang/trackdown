@@ -164,9 +164,9 @@ the two providers, `parse.js` / `parse-acr.js` normalize both to one contract, a
 
 **2026-07-30 — Vite content hashing disabled, and a build guard added to keep it that way.**
 `manifest.json` names `service-worker.js` by exact path, and the worker will name
-`offscreen.html` the same way in 1B. Vite's default `[name].[hash].js` breaks both without
-throwing: the extension still loads and the worker simply never runs, which reads as "my code
-does nothing" rather than as a build error.
+`offscreen.html` the same way in 1B. Vite's default `assets/[name]-[hash].js` breaks both
+without throwing: the extension still loads and the worker simply never runs, which reads as
+"my code does nothing" rather than as a build error.
 
 Overriding `entryFileNames` fixes it, but nothing stops the setting being lost later, so
 `extension/scripts/verify-dist.js` re-resolves every exact path after each build and fails
@@ -216,8 +216,9 @@ that risk. An unrecognized value refuses to boot rather than surfacing as a 500 
 real request.
 
 **2026-07-30 — Config loads through Node's `--env-file-if-exists`, not `dotenv`.**
-Node has read `.env` natively since 20.12, so the dependency buys nothing. The
-`-if-exists` variant matters specifically for deployment: Railway and Render inject env vars
+Node has read `.env` natively since 20.6 (`--env-file`), so the dependency buys nothing. The
+`--env-file-if-exists` variant, added in 20.12 and the reason `package.json` pins that
+engine floor, matters specifically for deployment: Railway and Render inject env vars
 from their dashboard and there is no `.env` file in the container, which plain `--env-file`
 treats as a fatal error. Server dependencies are therefore just express, multer and
 express-rate-limit.
