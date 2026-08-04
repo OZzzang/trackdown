@@ -17,6 +17,10 @@ Chrome Extension (Manifest V3) · React · Vite · Node · Express · MongoDB
 
 ## Local setup
 
+Both halves run independently — the extension needs the server only once Phase 1B lands.
+
+### Extension
+
 ```bash
 cd extension
 npm install
@@ -32,7 +36,23 @@ Then load it into Chrome:
 `npm run dev` rebuilds on save. Chrome does not hot-reload extensions, so click the reload
 icon on the TrackDown card after each rebuild.
 
-Server setup: _TBD — added at Phase 1C._
+### Server
+
+```bash
+cp .env.example server/.env    # then paste in your AudD token
+cd server
+npm install
+npm run dev
+```
+
+Runs on `http://localhost:3000`. Check it with:
+
+```bash
+curl -F "file=@clip.webm" localhost:3000/api/identify
+```
+
+You'll need your own [AudD](https://audd.io) token — the free tier is enough for
+development.
 
 ## Structure
 

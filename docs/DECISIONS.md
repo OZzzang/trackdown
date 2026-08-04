@@ -200,3 +200,51 @@ actually identifies a song — unproven. With the server already up, 1B lands en
 
 Accepted risk: if capture surprises us in a way that shifts the contract (chunking, MIME),
 the server needs a tweak. Low, because Phase 0 measured the format directly.
+
+---
+
+**2026-07-30 — `PROVIDER` accepts `acr` as an alias for `acrcloud`.**
+The two spellings were already in the repo pointing at the same thing: `.env.example` and
+CLAUDE.md say `acrcloud` (matching `services/acrcloud.js`), while `scratch/batch.sh` and the
+pre-launch checklist above say `PROVIDER=acr`. Canonical is `acrcloud`; `acr` maps to the
+same adapter.
+
+Rejected picking one and rewriting the other references. The checklist entry is inside a
+dated decision and is meant to run days before the production switch — the one moment where
+discovering a spelling mismatch is most expensive. A three-line alias table costs less than
+that risk. An unrecognized value refuses to boot rather than surfacing as a 500 on the first
+real request.
+
+**2026-07-30 — Config loads through Node's `--env-file-if-exists`, not `dotenv`.**
+Node has read `.env` natively since 20.12, so the dependency buys nothing. The
+`-if-exists` variant matters specifically for deployment: Railway and Render inject env vars
+from their dashboard and there is no `.env` file in the container, which plain `--env-file`
+treats as a fatal error. Server dependencies are therefore just express, multer and
+express-rate-limit.
+
+**2026-07-30 — Rate limiting: two per-IP windows now, the global breaker stays Phase 2.**
+10/hour stops a burst; 50/day stops a slow drip that would never trip the hourly window.
+Both are per-IP and therefore bound abuse, not spend — a distributed caller still costs
+money. The global daily circuit breaker that actually caps the bill is deliberately left in
+Phase 2, where deployment makes it real.
+
+`TRUST_PROXY` defaults to **off**. Behind Railway/Render the client IP arrives in
+`X-Forwarded-For` and the limiter needs it, but trusting that header when not behind a proxy
+lets anyone forge an IP and bypass rate limiting entirely. Off locally, set at deploy time.
+
+**2026-07-30 — Upstream errors become a generic 502; the provider's wording never leaves
+the server.** Verified rather than assumed: an invalid `AUDD_TOKEN` produces an AudD message
+naming the token and the account's subscription state. The client receives
+`{"error":"upstream_unavailable"}` and the detail goes to our log. Provider errors are
+exactly the class of string that leaks a credential or an internal hostname.
+
+**2026-07-30 — Phase 1C found a Phase 2 blocker: no Spotify credentials exist.**
+ACRCloud returns no artwork, so CLAUDE.md's rule is that cover art is filled server-side
+from the Spotify track ID it does return. That needs Spotify client-credentials keys, and
+`.env.example` had no entry for them — so switching `PROVIDER` in production would have
+silently shipped a popup with no album art.
+
+Placeholders added to `.env.example` and a TODO left in `services/acrcloud.js`. Folded into
+the pre-launch checklist: this now has to be done alongside buying ACRCloud, not after.
+Note it is the client-credentials flow, unrelated to the user-facing Spotify OAuth in
+Phase 4 — same vendor, different grant, different keys.

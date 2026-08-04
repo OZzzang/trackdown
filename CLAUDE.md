@@ -57,7 +57,16 @@ From `extension/`:
 | `npm run dev` | Same, rebuilding on change |
 | `npm run verify` | Check `dist/` against the paths `manifest.json` hardcodes |
 
-Server commands: _TBD at Phase 1C._
+From `server/`:
+
+| Command | Does |
+|---|---|
+| `npm run dev` | Start on `PORT` (default 3000), restarting on change |
+| `npm start` | Same, without the watcher |
+
+Both load `server/.env` through Node's built-in `--env-file-if-exists`, so there is no
+`dotenv` dependency and a deployed host that sets env vars in its dashboard — with no `.env`
+file present — still boots.
 
 ## Extension build layout
 
@@ -79,11 +88,12 @@ never runs.
 
 ## Current phase
 
-**Phase 1C** — the Express proxy. Phases 0 and 1A are complete; see `docs/DECISIONS.md`.
+**Phase 1B** — the capture pipeline. Phases 0, 1A and 1C are complete; see
+`docs/DECISIONS.md`. 1C ran before 1B deliberately; the reasoning is recorded there.
 
-**1C and 1B are deliberately swapped** against the order in `PLAN.md`; reasoning is in
-`DECISIONS.md`. In short: 1C's milestone is a `curl` command and needs no extension at all,
-while 1B's final step POSTs to a server that would not otherwise exist yet.
+The server answers `POST /api/identify` with the normalized contract, so 1B's final step has
+a real endpoint to POST to and the phase can land end to end rather than stopping at a Blob.
+Run it with `npm run dev` from `server/` while working on the extension.
 
 Phase 1A shipped a loadable extension with all three contexts wired and a working
 popup ↔ service worker message round trip. Nothing captures audio yet, and nothing creates
