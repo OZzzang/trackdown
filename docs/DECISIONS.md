@@ -249,3 +249,52 @@ Placeholders added to `.env.example` and a TODO left in `services/acrcloud.js`. 
 the pre-launch checklist: this now has to be done alongside buying ACRCloud, not after.
 Note it is the client-credentials flow, unrelated to the user-facing Spotify OAuth in
 Phase 4 — same vendor, different grant, different keys.
+
+**2026-08-05 — Tab capture uses the legacy `mandatory` constraint form.**
+The modern `getUserMedia` constraint syntax does not reject `chromeMediaSource` — it ignores
+it, and the call succeeds against the **default microphone** instead of the tab. The failure
+therefore looks like a working recording of the room rather than an error, and would have
+been found by listening rather than by reading a log. Rejected writing it the modern way for
+tidiness; the deprecated form is the only one that works.
+
+**2026-08-05 — The `AudioContext` is built before `getUserMedia`, not after.**
+Capturing a tab replaces its audio output rather than tapping it, so the tab is silent from
+the instant `getUserMedia` resolves until the passthrough is connected. Everything inside
+that window is audible as a dropout. Constructing the context beforehand keeps context
+startup off that path. A short blip remains and is structural — Chrome redirects the stream
+on its side — so this shortens the gap rather than removing it.
+
+**2026-08-05 — The offscreen document is closed after every capture, not kept warm.**
+Chrome permits exactly one, and leaving it open means the next click fails on
+`createDocument`. Closing it also drops the tab's recording indicator, which otherwise stays
+lit and reads as the extension still listening. Both teardown steps sit in `finally` blocks:
+tracks stop and the context closes even if the upload throws, and the document closes even
+if the whole relay throws. Rejected keeping it alive to save startup cost — the cost is
+milliseconds against a 5s capture, and the failure mode is a dead second click.
+
+**2026-08-05 — Blocked pages are screened in the worker, before `getMediaStreamId`.**
+`chrome://`, `chrome-extension://`, `devtools://`, `view-source:` and the Web Store all
+throw, but with a message that never says which rule was hit. Screening first yields a
+sentence Phase 1D can render as-is. The Web Store check is host-based rather than a scheme
+check because Chrome blocks extensions there specifically, so no extension can interfere
+with installing or removing another.
+
+**2026-08-05 — Capture outcomes are written to `chrome.storage.session` before responding.**
+A 5s capture plus a round trip outlives the popup whenever the user looks away, and a closed
+popup means `sendResponse` lands nowhere. The worker parks the outcome first, then answers;
+the popup reads it back on mount. Phase 1D builds the real state machine on this, but the
+write has to exist now or results are lost rather than merely unrendered.
+
+**2026-08-05 — Phase 1B confirmed the AudD metadata weakness on live audio.**
+Phase 0 recorded it from the spike; a real capture reproduced it. AudD returned
+`Kokoronashi` credited to a cover uploader rather than the canonical release — the
+fingerprint was correct and the metadata was not. A confidence score would not have caught
+this, because the match itself was right. This is why the result hedge in the popup is
+unconditional rather than score-gated, and it is an argument for `PROVIDER=acrcloud` in
+production beyond raw accuracy.
+
+A separate observation, kept because it costs an hour if unknown: **the popup picks up a
+rebuild on its own, the service worker does not.** The popup is re-fetched from `dist/` each
+time it opens; the worker stays resident until the card is reloaded at `chrome://extensions`.
+A new popup talking to a stale worker looks like new code failing. A changed popup is not
+evidence the worker reloaded — its console is.

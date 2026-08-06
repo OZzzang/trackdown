@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 # TrackDown Phase 0 — curl a clip at AudD and time the round trip.
-#   AUDD_TOKEN=xxx ./identify.sh clip-tab-8s-....webm
-# Throwaway spike; scratch/ is gitignored.
+#
+#   set -a; source server/.env; set +a
+#   ./identify.sh clip.webm
+#
+# Kept, not throwaway: this produced the latency and hit-rate numbers in docs/DECISIONS.md.
+# scratch/ is tracked — only the audio it writes is gitignored.
 
 set -euo pipefail
 

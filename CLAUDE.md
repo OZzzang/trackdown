@@ -88,16 +88,21 @@ never runs.
 
 ## Current phase
 
-**Phase 1B** — the capture pipeline. Phases 0, 1A and 1C are complete; see
+**Phase 1D** — wiring up and error states. Phases 0, 1A, 1C and 1B are complete; see
 `docs/DECISIONS.md`. 1C ran before 1B deliberately; the reasoning is recorded there.
 
-The server answers `POST /api/identify` with the normalized contract, so 1B's final step has
-a real endpoint to POST to and the phase can land end to end rather than stopping at a Blob.
-Run it with `npm run dev` from `server/` while working on the extension.
+The pipeline works end to end: a click captures 5s of tab audio, POSTs it, and renders the
+normalized result, with the tab's audio audible throughout. Run the server with `npm run dev`
+from `server/` while working on the extension — the extension has no offline path.
 
-Phase 1A shipped a loadable extension with all three contexts wired and a working
-popup ↔ service worker message round trip. Nothing captures audio yet, and nothing creates
-the offscreen document — `offscreen.html` builds into `dist/` but is never opened until 1B.
+What 1B verified on live audio: a hit, a miss (`200 {found:false}`), a hit with wrong
+metadata, and the refusal path on `chrome://` pages. What it did not: the Web Store, the PDF
+viewer, and a tab with nothing playing. A silent tab currently returns whatever AudD makes of
+silence rather than being detected as silent — that detection, and all user-facing error
+copy, is 1D's job.
+
+`server/clip.webm` is a known-good control clip, gitignored. When a capture misbehaves, curl
+it at the server to tell a bad recording apart from a bad upload in one command.
 
 Settled in Phase 0: AudD accepts `webm/opus` untranscoded (no ffmpeg, no container host),
 speech over music is not a failure mode, and the round trip is ~1s. **Capture length is 5s.**
