@@ -428,3 +428,32 @@ a reader, and always rendered — it is often the only surviving record. **`mess
 authored fallback copy, rendered only when the popup has no copy of its own for that reason.
 The producers now say which one they mean rather than the renderer guessing. Both are
 Phase 2 removals.
+
+**2026-08-08 — Cover art will come from the Spotify Web API, not from oEmbed.** Planned, not
+built; the shape of the work is in `docs/PLAN.md` under Phase 2.
+
+The switch to ACRCloud lost album art, and the popup has rendered text-only results since.
+Both candidate fixes take the same input — the Spotify track ID ACRCloud already returns —
+so the choice was purely about which endpoint to depend on.
+
+`https://open.spotify.com/oembed?url=…` was tested and works: no credentials at all, and it
+returned genuine 300×300 artwork for the control clip's track, which is ample against a popup
+that renders art at 56px. Rejected anyway. oEmbed exists to embed players; `thumbnail_url` is
+a side effect of that, its rate limits are unpublished, and the image CDN hostname is not a
+contract. That is a fine trade for a spike and a poor one for something on the Web Store with
+a name attached, where the failure mode is every user's artwork breaking at once with no
+warning and no recourse.
+
+The Web API costs a Spotify app registration and a client-credentials token flow — perhaps
+sixty lines with caching and refresh — and in exchange the endpoint is documented, versioned
+and supported. `.env.example` has anticipated this since Phase 1C, which is the point at which
+the gap was first spotted.
+
+Rejected the middle option of shipping oEmbed now and swapping it before submission. Nothing
+downstream of "it works" would have forced the swap, and the code most likely to survive to
+production is the code that is already there.
+
+One design note worth fixing now so it is not re-argued: this hooks into `services/index.js`,
+not `acrcloud.js`. Filling missing artwork is a normalization concern, not a provider quirk —
+CLAUDE.md's rule is that provider differences are the normalizer's problem — and hooking the
+seam covers any future provider that omits art without touching its adapter.
