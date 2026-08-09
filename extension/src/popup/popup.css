@@ -38,13 +38,76 @@ button {
   cursor: pointer;
 }
 
-button:hover {
+button:hover:not(:disabled) {
   opacity: 0.8;
+}
+
+/* A disabled button that still looks clickable invites a second click during the five
+   seconds the first one is still working. */
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .status {
   margin: 12px 0 0;
   font-size: 13px;
+}
+
+/* Recording progress. The fill is animated rather than driven from React so that a popup
+   opened mid-capture can pick the animation up partway through — see App.jsx. */
+/* The track is dimmed with color-mix, NOT with `opacity`. Opacity on a container is group
+   opacity: the whole subtree composites at that value and a child cannot exceed it, so a
+   0.15 track made the 0.15 fill inside it exactly its own colour — the animation ran, and
+   was invisible for it. Dimming the background alone leaves the child free. */
+.bar {
+  margin-top: 8px;
+  height: 3px;
+  border-radius: 2px;
+  background: color-mix(in srgb, currentColor 15%, transparent);
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  width: 0;
+  background: color-mix(in srgb, currentColor 70%, transparent);
+  animation-name: fill;
+  animation-timing-function: linear;
+  /* Holds at full width instead of snapping back while `identifying` takes over. */
+  animation-fill-mode: forwards;
+}
+
+@keyframes fill {
+  to {
+    width: 100%;
+  }
+}
+
+/* Everything that is neither a song nor a spinner: errors, refusals, and a clean miss.
+   One shape for all of them, because to the user they are the same moment — an answer
+   that isn't the answer they wanted, plus what to do next. */
+.notice {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 12px;
+}
+
+.notice-title {
+  font-size: 13px;
+}
+
+.notice-detail {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.debug {
+  margin-top: 4px;
+  font-size: 11px;
+  opacity: 0.5;
+  word-break: break-word;
 }
 
 .result {

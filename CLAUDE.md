@@ -18,12 +18,23 @@ forwarded to AudD → normalized song metadata returned to the popup.
 |---|---|---|---|
 | `extension/src/popup/` | Popup | yes | React. **Destroyed the moment it loses focus.** |
 | `extension/src/background/` | Service worker | **no** | Coordinator only. Sleeps after ~30s idle. |
-| `extension/src/offscreen/` | Offscreen document | yes | The only place audio can be recorded. |
+| `extension/src/offscreen/` | Offscreen document | yes | The only place audio can be recorded. **`chrome.runtime` is the only extensions API it has.** |
 
-These share no memory. They communicate only via `chrome.runtime.sendMessage`.
+These share no memory. Commands travel by `chrome.runtime.sendMessage`; **capture state
+travels through `chrome.storage.session`**, which every context reads, writes and subscribes
+to. `extension/src/shared/capture-state.js` is the one definition of that state and is
+imported by all three — Vite emits it as `dist/assets/capture-state.js`, a shared chunk the
+module service worker imports by relative path.
 
 `MediaRecorder`, `AudioContext`, and `getUserMedia` exist **only** in the offscreen document.
 Never write them into the service worker — it has no `window`, so they are undefined there.
+
+The restriction runs the other way too, and is easier to miss because the manifest looks like
+it grants the permission. **`chrome.storage` is undefined in the offscreen document** —
+`chrome.runtime` is the only extensions API offscreen documents support, regardless of what
+`permissions` says. Anything that context learns and wants remembered must be sent to the
+worker: `reportPhase()` in `shared/capture-state.js` is that path, and `setCaptureState()` is
+worker-and-popup only. This cost a debugging session on 2026-08-08; see `docs/DECISIONS.md`.
 
 ## Hard rules
 
@@ -33,9 +44,11 @@ Never write them into the service worker — it has no `window`, so they are und
 - The popup is a stateless renderer. Durable state goes in `chrome.storage.session`
   (or `chrome.storage.local` for the install-time device UUID).
 - **The fingerprinting provider is a config value, not a dependency.** `PROVIDER` selects
-  `services/audd.js` (development) or `services/acrcloud.js` (production). Provider-specific
-  field names stay inside that one file; nothing above `services/` may know which one
-  answered. Routes speak our normalized shape only.
+  `services/audd.js` or `services/acrcloud.js`. Provider-specific field names stay inside
+  that one file; nothing above `services/` may know which one answered. Routes speak our
+  normalized shape only. **`PROVIDER=acrcloud` since 2026-08-08** — the AudD trial ran out,
+  so it is now the development provider as well as the production one. AudD remains selectable
+  and its token is still in `.env`; nothing else changed to make the switch.
 - Providers differ, and those differences are the normalizer's problem, not the UI's:
   ACRCloud returns no artwork and no Apple Music URL but does return a confidence score.
   Fill missing artwork server-side from the Spotify track ID, keep `confidence` optional
@@ -88,18 +101,37 @@ never runs.
 
 ## Current phase
 
-**Phase 1D** — wiring up and error states. Phases 0, 1A, 1C and 1B are complete; see
-`docs/DECISIONS.md`. 1C ran before 1B deliberately; the reasoning is recorded there.
-
-The pipeline works end to end: a click captures 5s of tab audio, POSTs it, and renders the
-normalized result, with the tab's audio audible throughout. Run the server with `npm run dev`
+**Phase 2 — ship it.** Phases 0 through 1D are complete; see `docs/DECISIONS.md`. 1C ran
+before 1B deliberately; the reasoning is recorded there. Run the server with `npm run dev`
 from `server/` while working on the extension — the extension has no offline path.
 
-What 1B verified on live audio: a hit, a miss (`200 {found:false}`), a hit with wrong
-metadata, and the refusal path on `chrome://` pages. What it did not: the Web Store, the PDF
-viewer, and a tab with nothing playing. A silent tab currently returns whatever AudD makes of
-silence rather than being detected as silent — that detection, and all user-facing error
-copy, is 1D's job.
+Phase 1D closed on 2026-08-08, verified in the browser end to end. The popup is a pure
+renderer over `chrome.storage.session`: the worker is the **sole writer** of state, the
+offscreen document reports the two transitions only it can time, and the popup subscribes to
+`onChanged`. It owns every user-facing sentence, keyed off the `reason` each layer returns.
+Silence detection is two-tier (exactly-zero at 1.2s, RMS at 5s), a muted tab is refused up
+front, and `debug` vs `message` splits exception text from authored copy. All in
+`docs/DECISIONS.md` under 2026-08-08.
+
+Every row of the `docs/PLAN.md` Phase 1D table now has a passing test behind it: the happy
+path on **YouTube, Instagram Reels and TikTok** (the stated milestone), paused and muted tabs,
+`chrome://`, a popup dismissed mid-capture and reopened both during and after, server-down vs
+offline as distinct copy, a 502, and a 429 rendering "about 60 minutes" from `retryAfter`.
+Still untested from earlier phases: the Web Store and the PDF viewer.
+
+**The popup shows no cover art**, and that is the provider switch, not a defect. ACRCloud
+returns no artwork, the Spotify fill is Phase 2 work, and `SPOTIFY_CLIENT_ID` /
+`SPOTIFY_CLIENT_SECRET` are absent from `server/.env` entirely. `{song.albumArt && …}`
+degrades to a text-only result.
+
+Four things 1D deliberately left for Phase 2, beyond what `PLAN.md` already lists:
+
+- The `debug` line in the popup prints internal strings and must go before submission.
+- `IDENTIFY_URL` in `offscreen/offscreen.js` **and** `host_permissions` in `public/manifest.json`
+  both hardcode `http://localhost:3000` and have to move together.
+- CORS is open in `server/src/index.js`; lock it to the published extension ID.
+- `STALE_AFTER_MS` is 30s per phase, tuned against a local server. Re-check it against a
+  deployed one, where a cold start can exceed that on its own.
 
 `server/clip.webm` is a known-good control clip, gitignored. When a capture misbehaves, curl
 it at the server to tell a bad recording apart from a bad upload in one command.
@@ -109,6 +141,8 @@ speech over music is not a failure mode, and the round trip is ~1s. **Capture le
 `PLAN.md` still says 8s in its Phase 0 section — that is the historical record of what the
 spike recorded, not a spec.
 
-One finding constrains Phase 1D: AudD returns no confidence score, and has been observed
-matching audio correctly while reporting the wrong title from a mislabeled compilation
-entry. Results must not be presented to the user as certain.
+A standing constraint on result copy: AudD returns no confidence score, and has been observed
+matching audio correctly while reporting the wrong title from a mislabeled compilation entry.
+Results must not be presented to the user as certain. This holds under ACRCloud too — it
+*does* return a score, and the popup still hedges unconditionally, so the copy does not shift
+depending on which provider answered.

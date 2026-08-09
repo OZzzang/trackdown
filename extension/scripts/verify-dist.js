@@ -37,6 +37,14 @@ for (const html of ['popup.html', 'offscreen.html']) {
 // hard dependency too — but it lives in JS, where the check above cannot see it.
 check('offscreen.js', 'offscreen entry');
 
+// A module service worker resolves its static imports against the extension root, and code
+// shared with the other contexts is emitted as a separate chunk. A missing one is the same
+// silent failure as a hashed worker: the extension loads, the worker never runs.
+const worker = readFileSync(join(dist, 'service-worker.js'), 'utf8');
+for (const [, specifier] of worker.matchAll(/^import\s[^'"]*['"](\.[^'"]+)['"]/gm)) {
+  check(specifier.replace(/^\.\//, ''), 'service-worker import');
+}
+
 if (problems.length > 0) {
   console.error('\nBuild output is missing files referenced by exact path:\n');
   for (const problem of problems) console.error(`  ${problem}`);

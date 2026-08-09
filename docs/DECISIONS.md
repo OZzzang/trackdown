@@ -298,3 +298,133 @@ rebuild on its own, the service worker does not.** The popup is re-fetched from 
 time it opens; the worker stays resident until the card is reloaded at `chrome://extensions`.
 A new popup talking to a stale worker looks like new code failing. A changed popup is not
 evidence the worker reloaded — its console is.
+
+**2026-08-08 — The capture state machine lives in `chrome.storage.session`; the popup only
+renders it.** The popup is destroyed the moment it loses focus, so "popup closed
+mid-request" is not an edge case, it is the normal case. Rather than special-case it, all
+four states (`starting`, `recording`, `identifying`, `done`) are written to one storage key
+by whichever context owns that transition, and the popup subscribes to
+`storage.session.onChanged`. A write reaches an open popup as an event and a reopened one as
+a read, and the two are the same code path — there is no reconnect logic and no message that
+can be missed, because the popup was never holding the state. Rejected keeping a long-lived
+port open from the popup: it would need the closed case handled anyway, and then there would
+be two mechanisms.
+
+Consequence worth naming: the `recording` transition is written by the **offscreen document**
+at `recorder.start()`, not by the worker beforehand. Only the offscreen document knows when
+recording actually began, and the popup's five-second progress bar is only honest if it
+starts from that instant. The bar is a CSS animation with a negative `animation-delay`, so a
+popup opened two seconds in joins it two seconds in.
+
+**2026-08-08 — Silence is detected in two tiers, and only the cheap tier is fast.** An
+`AnalyserNode` taps the capture graph — input connected, output left dangling, so it feeds
+without rejoining the path to the speakers. A muted or paused tab emits samples of *exactly*
+zero, which is unambiguous in a way a threshold never is, so a check at 1.2s aborts on
+`peak === 0` and answers in one second instead of five. Anything nonzero runs the full 5s and
+is judged on RMS against 0.0005 (≈ −66 dBFS, two orders of magnitude below quiet music).
+Deliberately conservative in that direction: refusing to identify a real but faint song is a
+worse failure than spending one API call on near-silence. The analyser window is ~43ms at
+48kHz and polling is every 50ms, so the exactly-zero test sees nearly all the audio rather
+than a sample of it — a gap could otherwise pass the test by accident.
+
+**2026-08-08 — `tab.mutedInfo.muted` is grounds for refusing; `tab.audible` is not.** Muted
+is a *state* and captures as guaranteed silence, so the worker refuses immediately with copy
+that names the one-click fix. `audible === false` is an *instant* — a quiet intro or a gap
+between tracks satisfies it just as well as a paused video — and refusing on it would produce
+confident, wrong refusals on tabs that are genuinely playing. Rejected using it even as a
+hint. Neither field needs a permission; only `url` and `title` are gated by `tabs`.
+
+**2026-08-08 — Offline and server-down are split by `navigator.onLine`, and the split is
+knowingly imperfect.** `fetch` rejects with an indistinguishable `TypeError` for "no network"
+and "nothing listening on that host", so the only available discriminator is `navigator.onLine`
+— which answers the narrower question of whether this machine has a network interface at all.
+A captive portal or a dead uplink therefore reads as the server being down. Accepted rather
+than papered over with a reachability probe: the two messages differ only in which of them
+says "check your connection", both end in "try again", and a probe would add a second request
+to every failure to sharpen a distinction the user acts on identically.
+
+**2026-08-08 — All user-facing copy lives in the popup; the layers below return a `reason`.**
+Worker, offscreen document and server each return a machine-readable `reason` plus optional
+data (`retryAfter`), and the popup owns the sentences. Two layers writing copy is how copy
+drifts, and the server's `message` fields have to stay generic because they are an API
+contract, not UI. One deliberate exception: `unsupported_page` carries its detail up from the
+worker, because only the worker knows which rule was hit — a `chrome://` scheme, the Web
+Store, a tab with no page. The popup supplies the headline, the worker supplies the sentence
+under it. An unrecognised `reason` falls back to generic copy *and* prints the raw message;
+that debug line is tagged for removal in Phase 2, since a store build must not show users
+internal strings.
+
+**2026-08-08 — A non-terminal state older than 30s is presumed dead.** Nothing guarantees a
+`done` write: the worker can be torn down mid-capture, the offscreen document can crash, the
+tab can close. Without an expiry the popup sits at "Listening…" forever, which is the one
+failure mode that looks like our bug even when it isn't. The budget is measured from the last
+transition rather than from the start, so each phase gets its own. Checked twice, on purpose:
+once when a state is read at mount, so a stale one never renders even for a frame, and once
+on a timer for a state that goes quiet while the popup is watching.
+
+**2026-08-08 — `PROVIDER=acrcloud` in development too; the AudD trial ran out.** The switch
+cost one line in `server/.env` and no code, which is the seam in `services/index.js` doing
+exactly what it was built for. `/health` reports the change and the control clip round-trips
+in 1.4s with `confidence: 85` — a field AudD never sent, now flowing through the normalizer
+untouched by anything above `services/`.
+
+Two consequences, both known in advance and neither fixed here. **The popup has no cover
+art:** ACRCloud returns none, the Spotify fill is Phase 2, and `SPOTIFY_CLIENT_ID` /
+`SPOTIFY_CLIENT_SECRET` are not in `.env` at all — the Phase 1C finding, arriving earlier
+than expected because the switch was forced rather than planned. `appleMusicUrl` is null for
+the same reason. **Identification now costs money per call**, which turns the Phase 1D
+silence detection from a latency optimization into a cost one: a muted Reel or a paused video
+is refused before any request leaves.
+
+`AUDD_TOKEN` stays in `.env` and `audd` stays selectable, so the comparison rig in `scratch/`
+still runs and the switch is reversible by editing one line.
+
+Worth recording because it is the first time the provider seam was exercised under pressure
+rather than in a test: nothing above `services/` was touched, and the popup — which hedges
+unconditionally rather than keying off a confidence score — needed no change even though the
+shape of what it receives genuinely did.
+
+**2026-08-08 — `chrome.storage` does not exist in an offscreen document, and the state
+machine had to be rebuilt around that.** The 1D design made every context write its own
+transitions to `chrome.storage.session`. That is wrong for exactly one of them: per Chrome's
+offscreen documentation, *"The runtime API is the only extensions API supported by offscreen
+documents."* Not gated by `permissions`, not degraded — `chrome.storage` is simply undefined
+there, and the manifest listing `storage` makes it look granted.
+
+The failure was quiet in the worst way. `reportPhase`'s predecessor was called twice: once
+fire-and-forget after `recorder.start()`, where `.catch(() => {})` swallowed the TypeError
+whole, and once awaited before the upload, where it threw and surfaced as the generic
+`capture_failed`. So the symptom was a capture that recorded for its full five seconds and
+then reported that the tab may have closed — pointing at teardown, at tab lifetime, at
+YouTube, at anything except a storage call. Two things would have caught it sooner: the
+progress bar never appearing (the swallowed write was the one that triggers it), and the raw
+error message, which the popup was hiding — see below.
+
+Fix: the worker is the sole writer. The offscreen document reports its two transitions over
+`chrome.runtime.sendMessage`, the one API it does have. `reportPhase('identifying')` is
+**awaited**, and the worker completes the storage write **before** responding — because the
+worker writes `done` the moment this document answers the capture message, and a phase report
+still in flight then would land after the terminal state and strand the popup on
+"Identifying…" until the staleness timer fired. `reportPhase('recording')` is fire-and-forget
+because five seconds of recording follow it and nothing can overtake it.
+
+**2026-08-08 — Exception text and fallback copy are separate fields: `debug` and `message`.**
+Took two wrong attempts to see, and both failures came from one field doing two jobs.
+
+Attempt one showed the debug line only for *unrecognised* reasons, reasoning that a reason
+with friendly copy needs no raw detail. Exactly backwards: `capture_failed` is the catch-all
+for anything thrown inside the offscreen document — where the console dies with the document
+milliseconds later — so it is simultaneously the reason with friendly copy and the reason
+whose detail matters most. Having written copy for it is what hid the `chrome.storage`
+TypeError above. Attempt two therefore showed the message whenever it differed from the
+sentence already displayed, which promptly printed the server's "Song identification is
+unavailable right now" underneath our own "The music service is not answering right now" —
+the same sentence twice in two voices.
+
+Neither rule could work, because `message` carried both raw `err.message` strings and
+human-authored copy from the server, and no heuristic separates those reliably. Split them at
+the source instead. **`debug`** is exception text, written only by a `catch`, never meant for
+a reader, and always rendered — it is often the only surviving record. **`message`** is
+authored fallback copy, rendered only when the popup has no copy of its own for that reason.
+The producers now say which one they mean rather than the renderer guessing. Both are
+Phase 2 removals.
