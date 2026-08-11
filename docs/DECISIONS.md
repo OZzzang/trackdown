@@ -457,3 +457,48 @@ One design note worth fixing now so it is not re-argued: this hooks into `servic
 not `acrcloud.js`. Filling missing artwork is a normalization concern, not a provider quirk —
 CLAUDE.md's rule is that provider differences are the normalizer's problem — and hooking the
 seam covers any future provider that omits art without touching its adapter.
+
+---
+
+**2026-08-11 — The global daily budget fails closed, and counts attempts rather than
+successes.** Per-IP limits bound one caller; they do nothing about the same volume arriving
+from a hundred addresses, and the provider bills per call, so until now total spend was
+unbounded. `middleware/circuitBreaker.js` is the backstop: a global cap per UTC day,
+default 500, `DAILY_IDENTIFY_BUDGET` to override, and 0 as a kill switch that stops
+identification without stopping the server.
+
+Failing closed was the whole point, so the arguable calls are all in the details:
+
+**503, not 429.** A 429 says "you did too much" and would send the popup down its "Too many
+searches" path — blaming a first-time user for everyone else's traffic. 503 says the service
+is out of capacity, which is true, and it gets its own copy: "TrackDown is at capacity."
+
+**Attempts count, including the ones that 502.** An upstream that answered with an error may
+still have billed for it. Over-counting costs a few refusals; under-counting costs money, and
+would hand an attacker a free drain — any request they could make fail upstream would be
+uncounted.
+
+**The spend happens after the file check, and the breaker before the upload.** A malformed
+request never reaches the provider, so charging it against the day would let junk traffic
+exhaust the budget for free. In the other direction, the breaker sits ahead of `receiveClip`
+so a refused request doesn't cost a 2MB upload it was always going to turn away. Verified
+both ways: a fileless POST returned 400 without consuming budget, and two 502s did consume it.
+
+**A UTC calendar day, not a rolling 24h window.** Rolling would be stricter — it closes the
+burst at 23:59 followed by another at 00:01, which spends two days in two minutes. Taken
+anyway, because the reset has to be explicable: "try again tomorrow" is something a user can
+act on and a boundary burst still bounds spend *per day*, which is the quantity at risk.
+
+**In memory, which is the honest limit of it.** A restart resets the day, and a second
+instance would get its own full budget rather than sharing one. Accepted for the single small
+instance Phase 2 deploys — a database round trip on every request costs more than it protects
+until there is something to share state with. Revisit in Phase 3, when Mongo is present
+anyway. The budget is printed at boot partly so the log records when the counter last reset.
+
+**2026-08-11 — Retry times round to nearest, not up.** The daily budget resets at UTC
+midnight, so `retryAfter` is routinely hours rather than minutes and rounding up turned 6h01m
+into "about 7 hours" — an hour of overstatement on a sentence already hedged with "about".
+Rounding down is self-correcting: a user who comes back early gets the same function saying
+"Try again in 60 seconds". `retryPhrase` also lost its lead-in sentence so it composes onto
+whatever the caller says first; the 3600s case still renders "about 60 minutes", so the
+rate-limit copy verified in Phase 1D is unchanged.

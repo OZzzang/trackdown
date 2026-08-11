@@ -49,6 +49,14 @@ const ERROR_COPY = {
     title: 'Too many searches',
     detail: (outcome) => retryPhrase(outcome.retryAfter),
   },
+  daily_limit: {
+    // Distinct from rate_limited on purpose. That one is "you did too much"; this one is
+    // "everyone together did too much", and telling a first-time user they searched too
+    // often when they have searched once would be a lie.
+    title: 'TrackDown is at capacity',
+    detail: (outcome) =>
+      `Today's shared identification limit is used up. ${retryPhrase(outcome.retryAfter)}`,
+  },
   timed_out: {
     title: 'That took too long',
     detail: 'The capture never finished. Try again.',
@@ -68,12 +76,19 @@ const FALLBACK_COPY = {
   detail: 'Try again. If it keeps happening, reload TrackDown at chrome://extensions.',
 };
 
-// The server sends seconds, and only on 429 — the Retry-After header it reads that from is
-// not guaranteed to be there, so null has to say something useful too.
+// Seconds, from a Retry-After the server may not have set — so null has to read as a whole
+// sentence too. Kept to just the retry instruction, with no lead-in, so it composes onto
+// whatever the caller says before it.
 function retryPhrase(seconds) {
-  if (!seconds) return 'You have hit the limit for now. Try again later.';
+  if (!seconds) return 'Try again later.';
   if (seconds < 90) return `Try again in ${seconds} seconds.`;
-  return `Try again in about ${Math.ceil(seconds / 60)} minutes.`;
+  // Nearest, not up. 6h01m rounded up reads "about 7 hours", an hour of overstatement on a
+  // sentence already hedged with "about". Rounding down is self-correcting instead — come
+  // back early and the same function says "60 seconds".
+  if (seconds < 90 * 60) return `Try again in about ${Math.round(seconds / 60)} minutes.`;
+  // The daily budget resets at UTC midnight, so this branch is the common one for
+  // daily_limit. "Try again in about 780 minutes" is true and useless.
+  return `Try again in about ${Math.round(seconds / 3600) || 1} hours.`;
 }
 
 // A state read at mount may be older than the worker that wrote it. Resolving that here

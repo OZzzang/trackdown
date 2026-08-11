@@ -9,6 +9,7 @@ import multer from 'multer';
 import { identify } from '../services/index.js';
 import { UpstreamError } from '../services/upstream-error.js';
 import { perDay, perHour } from '../middleware/rateLimit.js';
+import { circuitBreaker, spendBudget } from '../middleware/circuitBreaker.js';
 
 // Memory storage, deliberately. CLAUDE.md: captured audio is never written to disk, because
 // the privacy policy promises we do not retain it. A 5s webm/opus clip is ~40KB; the 2MB
@@ -44,7 +45,9 @@ function receiveClip(req, res, next) {
   });
 }
 
-router.post('/identify', perHour, perDay, receiveClip, async (req, res, next) => {
+// The breaker sits ahead of receiveClip so a refused request never costs us a 2MB upload it
+// was always going to turn away.
+router.post('/identify', perHour, perDay, circuitBreaker, receiveClip, async (req, res, next) => {
   if (!req.file) {
     return res.status(400).json({
       error: 'no_file',
@@ -53,6 +56,10 @@ router.post('/identify', perHour, perDay, receiveClip, async (req, res, next) =>
   }
 
   try {
+    // Spent here rather than after the call returns, and only once a real clip is in hand: a
+    // request that reaches the provider has committed to whatever it costs, and a malformed
+    // one that never gets that far must not be charged against the day.
+    spendBudget();
     const result = await identify(req.file.buffer, req.file.originalname || 'clip.webm');
 
     // A miss is a successful request. 200 { found: false }, never a 404 — the request was

@@ -6,6 +6,7 @@
 import express from 'express';
 import identifyRoute from './routes/identify.js';
 import { providerName, selectProvider } from './services/index.js';
+import { dailyBudget } from './middleware/circuitBreaker.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -69,4 +70,8 @@ try {
 
 app.listen(PORT, () => {
   console.log(`TrackDown API on http://localhost:${PORT} — provider: ${providerName()}`);
+  // Printed at boot because the budget is in-memory: this line is also the record of when
+  // the counter was last reset, which is the first thing worth knowing when a deploy is
+  // followed by a suspicious spike.
+  console.log(`Daily identification budget: ${dailyBudget()}`);
 });

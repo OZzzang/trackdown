@@ -124,6 +124,14 @@ returns no artwork, the Spotify fill is Phase 2 work, and `SPOTIFY_CLIENT_ID` /
 `SPOTIFY_CLIENT_SECRET` are absent from `server/.env` entirely. `{song.albumArt && …}`
 degrades to a text-only result.
 
+**Phase 2 progress.** The global daily circuit breaker is **done** (2026-08-11):
+`middleware/circuitBreaker.js` caps provider calls per UTC day across all callers, default
+500, `DAILY_IDENTIFY_BUDGET` to override, `0` as a kill switch. It refuses with **503
+`daily_limit`**, not 429 — the caller did nothing wrong — and counts *attempts*, so a 502
+still spends budget. Verified by curl in all three states. The popup copy for it has not yet
+been seen in a browser. Everything else in `PLAN.md` Phase 2 is still open; the Spotify app
+registration is the one item blocked on a human.
+
 Four things 1D deliberately left for Phase 2, beyond what `PLAN.md` already lists:
 
 - The `debug` line in the popup prints internal strings and must go before submission.
