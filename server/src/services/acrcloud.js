@@ -45,11 +45,10 @@ export function normalize(raw) {
     artist: music.artists?.map((a) => a.name).join(', ') || null,
     album: music.album?.name ?? null,
     releaseDate: music.release_date ?? null,
-    // ACRCloud returns provider IDs rather than URLs, and no artwork at all.
-    //
-    // TODO(Phase 2): fill this from the Spotify track ID before switching PROVIDER in
-    // production, or the popup ships with no cover art. Needs Spotify client credentials,
-    // which are NOT yet in .env.example — see the Phase 1C notes in docs/DECISIONS.md.
+    // ACRCloud returns provider IDs rather than URLs, and no artwork at all. Left null on
+    // purpose: services/index.js fills it from the iTunes Search API on the way out, so the
+    // repair lives at the seam and this adapter stays a faithful record of what ACRCloud
+    // actually said.
     albumArt: null,
     spotifyUrl: spotifyId ? `https://open.spotify.com/track/${spotifyId}` : null,
     appleMusicUrl: appleId ? `https://music.apple.com/us/album/_/${appleId}` : null,

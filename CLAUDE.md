@@ -51,7 +51,7 @@ worker-and-popup only. This cost a debugging session on 2026-08-08; see `docs/DE
   and its token is still in `.env`; nothing else changed to make the switch.
 - Providers differ, and those differences are the normalizer's problem, not the UI's:
   ACRCloud returns no artwork and no Apple Music URL but does return a confidence score.
-  Fill missing artwork server-side from the Spotify track ID, keep `confidence` optional
+  Fill missing artwork server-side in `services/artwork.js`, keep `confidence` optional
   and null for AudD, and hedge result copy unconditionally rather than keying off a score
   only one provider supplies.
 - "Song not found" is a *successful* request: `200 { found: false }`. Not a 404.
@@ -119,18 +119,29 @@ path on **YouTube, Instagram Reels and TikTok** (the stated milestone), paused a
 offline as distinct copy, a 502, and a 429 rendering "about 60 minutes" from `retryAfter`.
 Still untested from earlier phases: the Web Store and the PDF viewer.
 
-**The popup shows no cover art**, and that is the provider switch, not a defect. ACRCloud
-returns no artwork, the Spotify fill is Phase 2 work, and `SPOTIFY_CLIENT_ID` /
-`SPOTIFY_CLIENT_SECRET` are absent from `server/.env` entirely. `{song.albumArt && …}`
-degrades to a text-only result.
+**Cover art is filled at the seam, not by the provider.** ACRCloud returns none, so
+`services/artwork.js` looks it up from the iTunes Search API on the way out — no credentials,
+no account, no key. It refuses to guess: a candidate needs title **and** artist to match, so a
+near-miss yields no artwork rather than a stranger's album cover. A failed lookup never fails
+an identification; `{song.albumArt && …}` degrades to a text-only result exactly as before.
+
+Confirmed in the browser 2026-08-11: most official releases resolve, a minority come back
+bare. That is the matcher declining a near-miss, not a defect — accepted deliberately, since
+the alternative is pairing a hedged "best match" with confidently wrong art.
+
+Do not reach for Spotify here. Its Web API now returns `403 Active premium subscription
+required for the owner of the app` for catalogue reads, and the dashboard gives no hint —
+the Premium note next to "which APIs" belongs to the Web Playback SDK, so the app registers
+fine and only the real call fails. Recorded in `docs/DECISIONS.md` under 2026-08-11.
 
 **Phase 2 progress.** The global daily circuit breaker is **done** (2026-08-11):
 `middleware/circuitBreaker.js` caps provider calls per UTC day across all callers, default
 500, `DAILY_IDENTIFY_BUDGET` to override, `0` as a kill switch. It refuses with **503
 `daily_limit`**, not 429 — the caller did nothing wrong — and counts *attempts*, so a 502
-still spends budget. Verified by curl in all three states. The popup copy for it has not yet
-been seen in a browser. Everything else in `PLAN.md` Phase 2 is still open; the Spotify app
-registration is the one item blocked on a human.
+still spends budget. Verified by curl in all three states and its copy confirmed in the popup.
+**Cover art is also done** (2026-08-11) — see above. Everything remaining in `PLAN.md` Phase 2
+needs an account, a payment or a design decision from Owen: the deploy, store registration,
+icons, and the privacy policy. Nothing is blocked on more code.
 
 Four things 1D deliberately left for Phase 2, beyond what `PLAN.md` already lists:
 

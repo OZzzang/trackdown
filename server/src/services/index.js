@@ -5,6 +5,7 @@
 
 import * as audd from './audd.js';
 import * as acrcloud from './acrcloud.js';
+import { withArtwork } from './artwork.js';
 
 // `acr` is an alias, not a second name. scratch/batch.sh and the pre-launch checklist in
 // docs/DECISIONS.md both use `PROVIDER=acr`, while .env.example and CLAUDE.md say
@@ -32,8 +33,14 @@ export function selectProvider() {
 
 // Resolved per call rather than at import time, so a bad PROVIDER surfaces as a real error
 // on a real request instead of a crash during module loading, and so tests can swap it.
+//
+// Artwork is filled here rather than in an adapter. Providers differ in what they omit, and
+// patching that up is the normalizer's job — this is the seam, so a provider that returns no
+// cover art is repaired without any adapter knowing it happened. A provider that does return
+// art passes through untouched.
 export async function identify(buffer, filename) {
-  return selectProvider().identify(buffer, filename);
+  const result = await selectProvider().identify(buffer, filename);
+  return withArtwork(result);
 }
 
 export function providerName() {

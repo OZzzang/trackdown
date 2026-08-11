@@ -502,3 +502,46 @@ Rounding down is self-correcting: a user who comes back early gets the same func
 "Try again in 60 seconds". `retryPhrase` also lost its lead-in sentence so it composes onto
 whatever the caller says first; the 3600s case still renders "about 60 minutes", so the
 rate-limit copy verified in Phase 1D is unchanged.
+
+**2026-08-11 — Cover art comes from the iTunes Search API. Spotify's Web API is no longer
+available to us at all.** This supersedes the 2026-08-08 entry above, which chose the Spotify
+Web API over oEmbed. That entry is kept rather than deleted: the reasoning in it was sound on
+the facts available, and what changed was the facts.
+
+Spotify now gates catalogue reads behind the *app owner* holding Premium. This was established
+empirically, not inferred — a client-credentials token issued fine, and
+`GET /v1/tracks/{id}` answered `403 Active premium subscription required for the owner of the
+app`. Worth recording how close that came to being missed: the dashboard's "which APIs" list
+carries a Premium note that belongs to the Web Playback SDK, so Web API appeared free and
+tickable, and the app registered without complaint. Only the actual call told the truth.
+
+Deezer was checked next and ruled out on data. Dumping ACRCloud's raw response for the control
+clip showed `external_metadata` containing **Spotify only** and `external_ids` empty — no
+Deezer ID, no ISRC. There is nothing to look Deezer up by.
+
+That left three: iTunes Search, Spotify oEmbed, or no artwork at all. Chose iTunes.
+
+**Rejected oEmbed**, having earlier tested it working and returning correct 300×300 art with no
+account. It is exact — a lookup by Spotify track ID rather than a search — which is genuinely
+better than what iTunes offers. But oEmbed exists to return embeddable player HTML, and
+`thumbnail_url` is incidental to that; using it as an artwork API on a store-published product
+carrying the author's name is a terms exposure that does not degrade gracefully the way a
+technical failure does. iTunes Search is public, unauthenticated and *documented for exactly
+this* — third-party lookup of the catalogue. Trading exactness for legitimacy was the whole
+point of the choice.
+
+**Rejected shipping without artwork**, which the ranked alternatives made a real option and
+which cost nothing. iTunes turned out to need no account, no key and no ongoing cost, so the
+only thing it spends is a ~0.4s lookup on a cache miss and nothing on a hit.
+
+The cost of the trade is fuzzy matching, and it is handled by refusing to guess: a candidate is
+accepted only when title **and** artist both match after normalization. A title-only match
+returns null. Verified across seven cases including the one that matters — the correct title
+paired with the wrong artist yields no artwork rather than someone else's album cover. Wrong art
+would be worse than none, because every result is already hedged as a "best match" precisely
+because provider metadata can be wrong, and a confident picture attached to a wrong title
+undoes that warning.
+
+Comparison is substring-either-way rather than equality, because providers disagree at the
+edges of the same name: ACRCloud's "League of Legends" is iTunes' "League of Legends Music",
+and exact matching rejects the correct answer over a suffix.

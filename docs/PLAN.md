@@ -131,8 +131,8 @@ downside compounds while you work on the others.
 - **Global daily circuit breaker.** `express-rate-limit` already caps per IP (10/hr, 50/day),
   which bounds one attacker, not total spend. `PROVIDER=acrcloud` bills per call, so a public
   extension pointing at an open proxy is an unbounded bill. Must fail closed.
-- **Cover art from the Spotify Web API.** Own section below — it needs a credential you have
-  to go and create, so start it early even though it is not the biggest job.
+- ~~**Cover art.**~~ **Done 2026-08-11** — filled from the iTunes Search API, no credentials
+  needed. Section below records why it is not Spotify.
 - Deploy server to Railway or Render. Free tiers cold-start ~50s, which reads as broken —
   the ~$7/mo tier is worth it for real users. Env vars go in the dashboard.
 - **Move `IDENTIFY_URL` and `host_permissions` together.** `extension/src/offscreen/offscreen.js`
@@ -156,40 +156,26 @@ downside compounds while you work on the others.
 - Untested surfaces still outstanding from Phase 1: the Chrome Web Store page and the built-in
   PDF viewer. Both should hit `unsupported_page`; neither has been confirmed.
 
-### Cover art — Spotify Web API (planned 2026-08-08, not yet built)
+### Cover art — done 2026-08-11, via the iTunes Search API
 
-ACRCloud returns no artwork and no Apple Music URL, but does return a Spotify track ID, so the
-art is one lookup away. Decision and rejected alternative are in `docs/DECISIONS.md`.
+`server/src/services/artwork.js`, hung off the `services/index.js` seam. Needs no credentials
+of any kind. Full reasoning in `docs/DECISIONS.md`; the short version is that **Spotify's Web
+API now refuses catalogue reads unless the app owner holds Premium** — a valid
+client-credentials token still returns `403 Active premium subscription required for the owner
+of the app`. That killed the original plan outright, and ACRCloud returns no Deezer ID and no
+ISRC to route around it with.
 
-**Blocking human input:** create an app at https://developer.spotify.com/dashboard, then put
-its client ID and secret in `server/.env` as `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET`.
-`.env.example` already documents both; `server/.env` currently has neither. This is the
-client-credentials grant — no user login, no redirect URI, unrelated to the user-facing
-Spotify OAuth in Phase 4.
+If you ever revisit this, the two things worth knowing:
 
-Shape of the work, so it does not need re-deriving:
-
-- New `server/src/services/artwork.js`, called from the `services/index.js` seam — **not** from
-  `acrcloud.js`. Artwork filling is provider-agnostic by CLAUDE.md's rule, and hooking it at the
-  seam means any future provider that omits art is covered for free.
-- Applies only when a result is `found`, `albumArt` is null, and a Spotify ID can be parsed out
-  of `spotifyUrl`. Parse it from the URL rather than adding `spotifyId` to the contract; the
-  normalized shape stays as documented above.
-- Client-credentials token: `POST https://accounts.spotify.com/api/token` with HTTP Basic auth,
-  cached in memory against `expires_in` (3600s) with a refresh margin, and a single shared
-  in-flight refresh so concurrent requests do not each fetch one — same pattern as
-  `ensureOffscreenDocument`'s `creating` guard.
-- Then `GET https://api.spotify.com/v1/tracks/{id}` → `album.images`, which come back at
-  640/300/64. Pick the **smallest that clears 300px**: the popup renders art at 56px CSS, so 300
-  covers a 3x display and 640 is wasted bytes.
-- Cache artwork URLs by track ID, capped and evicting oldest. Cache a definitive "no art"
-  (a 200 with no images, or a 404) so it is not retried; do **not** cache a transient failure.
-- On 401, drop the cached token and retry once — tokens can be revoked mid-life.
-- **A failed artwork lookup must never fail the identify.** Log it, return `albumArt: null`, and
-  let the popup render exactly as it does today. `{song.albumArt && …}` already degrades.
-- With no credentials configured, skip silently and warn once at startup rather than per
-  request. Consider reporting configured-or-not from `/health` alongside `provider`, which is
-  the same diagnostic role it already plays.
+- Matching is deliberately **conservative**. iTunes is searched by title and artist, and a
+  candidate is only accepted when *both* match after normalization. A title-only match returns
+  no artwork rather than a guess, because a bare title search lands on karaoke covers and
+  tribute records whose art belongs to a different release entirely. Results are already
+  hedged as a "best match"; pairing one with confidently wrong art compounds the exact error
+  the hedge exists to warn about.
+- Comparison is substring-either-way, not equality: ACRCloud says "League of Legends" where
+  iTunes says "League of Legends Music", and exact matching rejects the right answer over a
+  suffix.
 
 **Submit here, before Phases 3–4.** Review takes days to weeks and is the one thing that
 can't be sped up. Updates can ship while it's pending.

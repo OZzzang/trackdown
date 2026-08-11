@@ -122,6 +122,12 @@ button:disabled {
   height: 56px;
   border-radius: 4px;
   flex-shrink: 0;
+  /* Cover art is square in practice, but a fixed box plus a non-square source stretches the
+     image rather than cropping it, and a stretched album cover looks like a rendering bug. */
+  object-fit: cover;
+  /* Something to occupy the box between layout and the image arriving, so the text beside it
+     doesn't visibly jump. */
+  background: color-mix(in srgb, currentColor 10%, transparent);
 }
 
 .meta {
