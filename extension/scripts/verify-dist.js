@@ -45,10 +45,33 @@ for (const [, specifier] of worker.matchAll(/^import\s[^'"]*['"](\.[^'"]+)['"]/g
   check(specifier.replace(/^\.\//, ''), 'service-worker import');
 }
 
+// The API origin is written into two places by vite.config.js — the manifest's
+// host_permissions and the fetch inside offscreen.js — and Chrome blocks the request if they
+// disagree. That failure surfaces in the popup as "Can't reach TrackDown", which sends you
+// looking at the server rather than at the build, so it is worth catching here instead.
+const hosts = manifest.host_permissions ?? [];
+if (hosts.length === 0) {
+  problems.push('manifest.host_permissions is empty — vite.config.js did not write it');
+} else {
+  const offscreen = readFileSync(join(dist, 'offscreen.js'), 'utf8');
+  for (const pattern of hosts) {
+    const origin = pattern.replace(/\/\*$/, '');
+    if (!offscreen.includes(origin)) {
+      problems.push(
+        `host_permissions grants ${origin} but offscreen.js never calls it — ` +
+          'the manifest and the bundle were built against different origins',
+      );
+    }
+  }
+}
+
 if (problems.length > 0) {
-  console.error('\nBuild output is missing files referenced by exact path:\n');
+  console.error('\nBuild output failed verification:\n');
   for (const problem of problems) console.error(`  ${problem}`);
-  console.error('\nMost likely cause: content hashing re-enabled in vite.config.js.\n');
+  console.error(
+    '\nA missing file usually means content hashing was re-enabled in vite.config.js.' +
+      '\nAn origin mismatch means the manifest and the bundle were built separately.\n',
+  );
   process.exit(1);
 }
 

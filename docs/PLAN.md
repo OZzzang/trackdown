@@ -135,12 +135,12 @@ downside compounds while you work on the others.
   needed. Section below records why it is not Spotify.
 - Deploy server to Railway or Render. Free tiers cold-start ~50s, which reads as broken —
   the ~$7/mo tier is worth it for real users. Env vars go in the dashboard.
-- **Move `IDENTIFY_URL` and `host_permissions` together.** `extension/src/offscreen/offscreen.js`
-  and `extension/public/manifest.json` both hardcode `http://localhost:3000`. A fetch to a host
-  not in `host_permissions` is blocked before it leaves and reads as the server being down.
-- **Re-check `STALE_AFTER_MS`** (30s per phase, in `extension/src/shared/capture-state.js`). It
-  was tuned against a local server; a deployed cold start can exceed it alone and would surface
-  as a spurious "That took too long".
+- ~~**Move `IDENTIFY_URL` and `host_permissions` together.**~~ **Done 2026-08-11** — both are
+  generated from the build mode by `vite.config.js` and cross-checked by `verify-dist.js`,
+  so they cannot drift apart and no source file names an environment.
+- ~~**Re-check `STALE_AFTER_MS`**~~ **Done 2026-08-11, left at 30s.** The concern was a
+  free-tier cold start of ~50s tripping it; Render Starter does not spin down, and the
+  deployed server answers in 0.67–1.1s. Revisit only if the instance type ever drops to Free.
 - **Delete the `debug` line** in `extension/src/popup/App.jsx`. It prints raw exception text and
   must not ship. Tagged in the source.
 - **Lock CORS** in `server/src/index.js` to the published extension ID, which is fixed once

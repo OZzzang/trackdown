@@ -545,3 +545,44 @@ undoes that warning.
 Comparison is substring-either-way rather than equality, because providers disagree at the
 edges of the same name: ACRCloud's "League of Legends" is iTunes' "League of Legends Music",
 and exact matching rejects the correct answer over a suffix.
+
+**2026-08-11 — The API origin is a build-mode output, not a source constant, and the manifest
+no longer declares `host_permissions` at all.** Deployed to Render, so the extension had to
+stop pointing at `localhost`. The naive move — edit two files — sets up the worst-shaped bug
+this project can ship: an extension published pointing at `localhost:3000` works perfectly on
+the developer's machine and fails for every single user.
+
+`vite.config.js` now derives the origin from the build mode (`npm run dev` → local,
+`npm run build` → Render) and writes it into both places that need it: a `define` that
+replaces `__API_ORIGIN__` inside `offscreen.js`, and a `closeBundle` hook that writes
+`host_permissions` into `dist/manifest.json`. Neither build can be shipped wearing the other's
+configuration, because neither is written by hand.
+
+`public/manifest.json` therefore has **no** `host_permissions` key. Rejected leaving a
+placeholder there: a stale-looking value that is silently overwritten is exactly the kind of
+thing someone later "fixes" by editing it. With the key absent, a manifest whose generation
+step failed grants no host permission at all and refuses every request — loud, and trivially
+diagnosed, where a manifest quietly naming the wrong environment is neither.
+
+Rejected listing both origins and letting one build serve both purposes. `host_permissions`
+is static JSON and cannot read the mode, but the real objection is that
+`http://localhost:3000/*` on a *published* extension grants it access to whatever the user
+happens to be running on their own machine. That is exactly the unjustified breadth `PLAN.md`
+warns reviewers reject, and it would be an awkward thing to defend for a music-identification
+extension.
+
+`verify-dist.js` gained the matching guard: it fails the build if `host_permissions` is empty,
+or if it grants an origin that never appears in the built `offscreen.js`. Verified by
+tampering with `dist/manifest.json` and watching the build fail. Chrome blocks a fetch to an
+unlisted host *before it leaves*, and the popup renders that as "Can't reach TrackDown" — which
+sends you debugging the server instead of the build. That is a full afternoon, and the check
+that prevents it is fifteen lines.
+
+**2026-08-11 — `STALE_AFTER_MS` stays at 30s; the cold-start worry does not apply.** `PLAN.md`
+flagged it as tuned against a local server, on the theory that a deployed cold start could
+exceed 30s by itself and surface as a spurious "That took too long". Render's Starter instance
+does not spin down, so cold starts happen only on deploy, and the deployed server answers a
+full identification in 0.67–1.1s — faster than local, since it now sits beside ACRCloud's US
+endpoint rather than routing from a laptop. Recorded so it reads as checked rather than
+forgotten. Revisit only if the instance ever drops to the Free tier, where the ~50s spin-up
+would break it immediately.

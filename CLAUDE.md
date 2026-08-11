@@ -66,9 +66,16 @@ From `extension/`:
 
 | Command | Does |
 |---|---|
-| `npm run build` | Build to `extension/dist/`, then verify exact-path references |
-| `npm run dev` | Same, rebuilding on change |
+| `npm run build` | Build to `extension/dist/` against **production**, then verify |
+| `npm run dev` | Build against **`localhost:3000`**, rebuilding on change |
 | `npm run verify` | Check `dist/` against the paths `manifest.json` hardcodes |
+
+**The two builds target different servers.** `npm run dev` passes `--mode development` and
+points the extension at the local server; `npm run build` points it at Render. So testing a
+local server change means `npm run dev`, and `npm run build` is what you load when you want
+to exercise production. Loading the wrong one is not subtle — a production build with no
+local server running is fine, and a dev build with no local server says "Can't reach
+TrackDown".
 
 From `server/`:
 
@@ -143,14 +150,16 @@ still spends budget. Verified by curl in all three states and its copy confirmed
 needs an account, a payment or a design decision from Owen: the deploy, store registration,
 icons, and the privacy policy. Nothing is blocked on more code.
 
-Four things 1D deliberately left for Phase 2, beyond what `PLAN.md` already lists:
+Of the four things 1D left for Phase 2, two are closed:
 
+- ~~The API origin is hardcoded.~~ **Done** — `vite.config.js` picks it from the build mode
+  and writes it into *both* `offscreen.js` and the manifest's `host_permissions`, which is
+  why neither is written by hand any more. `verify-dist.js` fails the build if they drift.
+- ~~`STALE_AFTER_MS` needs re-checking against a deploy.~~ **Checked 2026-08-11, unchanged at
+  30s.** The worry was free-tier cold starts of ~50s; Render Starter does not spin down, and
+  production answers in 0.67–1.1s against a 30s per-phase budget.
 - The `debug` line in the popup prints internal strings and must go before submission.
-- `IDENTIFY_URL` in `offscreen/offscreen.js` **and** `host_permissions` in `public/manifest.json`
-  both hardcode `http://localhost:3000` and have to move together.
 - CORS is open in `server/src/index.js`; lock it to the published extension ID.
-- `STALE_AFTER_MS` is 30s per phase, tuned against a local server. Re-check it against a
-  deployed one, where a cold start can exceed that on its own.
 
 `server/clip.webm` is a known-good control clip, gitignored. When a capture misbehaves, curl
 it at the server to tell a bad recording apart from a bad upload in one command.

@@ -13,10 +13,12 @@ import { RECORD_MS, reportPhase } from '../shared/capture-state.js';
 
 const MIME = 'audio/webm;codecs=opus';
 
-// Must stay in step with `host_permissions` in public/manifest.json. A fetch to a host that
-// isn't listed there is blocked before it leaves, and the failure reads as the server being
-// down rather than as a manifest problem.
-const IDENTIFY_URL = 'http://localhost:3000/api/identify';
+// `__API_ORIGIN__` is replaced at build time by vite.config.js, which writes the same origin
+// into the manifest's `host_permissions`. They have to agree — a fetch to a host missing
+// from host_permissions is blocked before it leaves, and reads as the server being down
+// rather than as a manifest problem — so neither is written by hand any more, and
+// verify-dist.js fails the build if they drift apart.
+const IDENTIFY_URL = __API_ORIGIN__ + '/api/identify';
 
 // Below this RMS the clip carries no signal worth spending an API call on. Full scale is
 // 1.0 and music sits around 0.05–0.2, so 0.0005 (about −66 dBFS) is two orders of magnitude
