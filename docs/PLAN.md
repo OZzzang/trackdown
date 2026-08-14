@@ -210,9 +210,8 @@ Two follow-ups are blocked on the store issuing a permanent extension ID:
 - Install the published copy and run one identification through it — the first time the
   *published* ID talks to the server rather than an unpacked one.
 
-And one number to keep an eye on: `DAILY_IDENTIFY_BUDGET` is 500/day across all users, which
-is roughly 100 people doing five searches. ACRCloud bills per call, so that is the exposure
-ceiling, not a performance setting.
+`DAILY_IDENTIFY_BUDGET` stays at the default 500/day across all users — **settled 2026-08-14,
+not an open question.** It is one dashboard edit to change if traffic ever justifies it.
 
 ---
 
