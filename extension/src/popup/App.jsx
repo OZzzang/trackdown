@@ -71,9 +71,14 @@ const ERROR_COPY = {
   },
 };
 
+// For a `reason` this file has no copy for — a new server error, or a bug. The server's own
+// `message` is authored, user-safe copy, so it is better than a generic sentence when there
+// is one; it is used only here, where we genuinely have nothing of our own to say.
 const FALLBACK_COPY = {
   title: 'Something went wrong',
-  detail: 'Try again. If it keeps happening, reload TrackDown at chrome://extensions.',
+  detail: (outcome) =>
+    outcome.message ??
+    'Try again. If it keeps happening, reload TrackDown at chrome://extensions.',
 };
 
 // Seconds, from a Retry-After the server may not have set — so null has to read as a whole
@@ -157,8 +162,6 @@ export default function App() {
       </button>
 
       <Status state={state} />
-
-      <p className="phase">Phase 1D — wiring and error states.</p>
     </main>
   );
 }
@@ -237,23 +240,19 @@ function Outcome({ outcome }) {
 }
 
 function Problem({ outcome }) {
-  const copy = ERROR_COPY[outcome.reason];
-  const { title, detail } = copy ?? FALLBACK_COPY;
+  const { title, detail } = ERROR_COPY[outcome.reason] ?? FALLBACK_COPY;
 
-  // Two different things arrive under two different names, and conflating them is what made
-  // this hard to get right. `debug` is raw exception text — never written for a reader, and
-  // the only record of it once the offscreen console dies, so it always shows. `message` is
-  // authored copy from the server, which duplicates whatever we would say ourselves; it is
-  // worth showing only when we have nothing of our own. Both go in Phase 2.
-  const extra = outcome.debug ?? (copy ? null : outcome.message);
-
+  // `outcome.debug` — raw exception text — is deliberately NOT rendered. It was on screen
+  // through 1D because the offscreen console dies with the document, making the popup the
+  // only place the string was visible. It is not lost by dropping it here: the whole outcome
+  // object, `debug` included, is sitting in chrome.storage.session, which DevTools can read
+  // long after the fact. Users get the sentence; we keep the stack.
   return (
     <div className="notice">
       <strong className="notice-title">{title}</strong>
       <span className="notice-detail">
         {typeof detail === 'function' ? detail(outcome) : detail}
       </span>
-      {extra && <code className="debug">{extra}</code>}
     </div>
   );
 }

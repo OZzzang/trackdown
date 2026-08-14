@@ -103,13 +103,6 @@ button:disabled {
   opacity: 0.7;
 }
 
-.debug {
-  margin-top: 4px;
-  font-size: 11px;
-  opacity: 0.5;
-  word-break: break-word;
-}
-
 .result {
   display: flex;
   gap: 10px;
@@ -158,10 +151,4 @@ button:disabled {
 .artist {
   font-size: 13px;
   opacity: 0.7;
-}
-
-.phase {
-  margin: 16px 0 0;
-  font-size: 11px;
-  opacity: 0.5;
 }
