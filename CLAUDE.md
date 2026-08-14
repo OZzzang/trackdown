@@ -146,11 +146,23 @@ fine and only the real call fails. Recorded in `docs/DECISIONS.md` under 2026-08
 500, `DAILY_IDENTIFY_BUDGET` to override, `0` as a kill switch. It refuses with **503
 `daily_limit`**, not 429 — the caller did nothing wrong — and counts *attempts*, so a 502
 still spends budget. Verified by curl in all three states and its copy confirmed in the popup.
-**Cover art is also done** (2026-08-11) — see above. Everything remaining in `PLAN.md` Phase 2
-needs an account, a payment or a design decision from Owen: the deploy, store registration,
-icons, and the privacy policy. Nothing is blocked on more code.
+**Cover art is also done** (2026-08-11) — see above.
 
-Of the four things 1D left for Phase 2, two are closed:
+**Phase 2 is code-complete as of 2026-08-14.** Icons (16/32/48/128 in
+`extension/public/icons/`, cropped from Owen's artwork, guarded by `verify-dist.js`), the
+`debug` line gone from the popup, and CORS lockable by env var. `docs/PRIVACY.md` and
+`docs/STORE-LISTING.md` are drafted. What remains needs an account, a payment, a screenshot or
+a hosted URL — not more code:
+
+- Host `docs/PRIVACY.md` on Owen-Site; the store form validates that the URL loads.
+- Register on the Web Store ($5) and submit `extension/dist/` zipped — the build output, not
+  the source directory.
+- A 1280×800 screenshot. `docs/STORE-LISTING.md` says which three shots are worth taking.
+- Once the store issues an ID, set `ALLOWED_EXTENSION_IDS` in the Render dashboard.
+- Still unconfirmed from Phase 1: the Web Store page and the PDF viewer, both of which should
+  hit `unsupported_page`.
+
+Of the four things 1D left for Phase 2, all four are now closed:
 
 - ~~The API origin is hardcoded.~~ **Done** — `vite.config.js` picks it from the build mode
   and writes it into *both* `offscreen.js` and the manifest's `host_permissions`, which is
@@ -158,8 +170,14 @@ Of the four things 1D left for Phase 2, two are closed:
 - ~~`STALE_AFTER_MS` needs re-checking against a deploy.~~ **Checked 2026-08-11, unchanged at
   30s.** The worry was free-tier cold starts of ~50s; Render Starter does not spin down, and
   production answers in 0.67–1.1s against a 30s per-phase budget.
-- The `debug` line in the popup prints internal strings and must go before submission.
-- CORS is open in `server/src/index.js`; lock it to the published extension ID.
+- ~~The `debug` line in the popup prints internal strings.~~ **Removed 2026-08-14.** Nothing
+  was lost: the full outcome object, `debug` included, still lands in `chrome.storage.session`
+  where DevTools reads it after the fact. The channel moved; it did not close.
+- ~~CORS is open in `server/src/index.js`.~~ **Lockable 2026-08-14** via
+  `ALLOWED_EXTENSION_IDS` — bare comma-separated IDs, unset means allow-all and says so at
+  boot. Awaiting the published ID, which is a dashboard edit rather than a deploy. Note this
+  is belt-and-braces: an extension page fetching a host in its own `host_permissions` is not
+  subject to CORS at all, so it governs curl and non-extension callers, not the extension.
 
 `server/clip.webm` is a known-good control clip, gitignored. When a capture misbehaves, curl
 it at the server to tell a bad recording apart from a bad upload in one command.

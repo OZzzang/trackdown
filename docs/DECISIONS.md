@@ -586,3 +586,49 @@ full identification in 0.67–1.1s — faster than local, since it now sits besi
 endpoint rather than routing from a laptop. Recorded so it reads as checked rather than
 forgotten. Revisit only if the instance ever drops to the Free tier, where the ~50s spin-up
 would break it immediately.
+
+---
+
+**2026-08-14 — The icon is a crop of Owen's artwork, not the artwork.** What arrived was a
+logo *presentation*: a 1024px render of a white card on a grey ground, drop shadow included,
+with the mark in the middle and a "TrackDown" wordmark beneath it. Shipping it whole would
+have spent most of the icon's pixels on the card and the shadow, and the wordmark — a quarter
+of the height — is unreadable below about 64px, while the toolbar renders at 16. Cropped to
+the circular mark alone (640×640 at offset 195,127 in the source) and downscaled with `sips`.
+The first crop was three pixels too generous and caught the tops of the letters at 128px,
+which is only visible if you actually look at the output — hence looking at it.
+
+**2026-08-14 — `verify-dist.js` checks the icons too.** A missing icon is the same class of
+failure as a hashed filename: nothing throws. Chrome substitutes a generated letter tile that
+looks enough like an icon to ship past, and the Web Store rejects a submission missing the
+128 only after you have waited for review. Six lines to turn both into a failed build.
+
+**2026-08-14 — `debug` no longer renders; the string is not lost.** It was on screen through
+1D for a real reason — the offscreen console dies with the document, so the popup was the
+only place exception text was visible. That reason expired: the whole outcome object is
+written to `chrome.storage.session`, `debug` included, and DevTools reads it there long
+after. So this is not a tradeoff of debuggability for polish; the channel just moved. The
+`message` fallback survives, but only where the popup has no copy of its own, and now renders
+as ordinary detail text rather than in a monospace `<code>` that read like a leak even when
+it wasn't.
+
+**2026-08-14 — CORS is locked by env var, not by a hardcoded ID.** `ALLOWED_EXTENSION_IDS`
+takes bare comma-separated IDs; unset allows all and says so at boot, which is right for
+development and makes a production instance left open visible in the logs rather than silent.
+Hardcoding was rejected on two grounds: the published ID does not exist until the store
+issues it, so the code would have to ship with a placeholder anyway; and a dashboard edit is
+revertible in seconds where a deploy is not. Multiple origins are echoed rather than listed,
+because `Access-Control-Allow-Origin` takes one origin or `*` and never a set — with `Vary:
+Origin` so an intermediate cache cannot hand one caller's allow header to the next.
+
+Also corrects something asserted on 2026-08-11: locking CORS was said to break every unpacked
+install. It does not. An extension page fetching a host listed in its own `host_permissions`
+is not subject to CORS at all, which `server/src/index.js` already said in a comment. These
+headers only ever governed curl and non-extension callers.
+
+**2026-08-14 — The store listing declares "Website content" as data handled.** The tempting
+answer is no, on the grounds that nothing is retained. That is not what the question asks:
+Chrome defines the category as text, images, **sounds**, video or hyperlinks taken from a
+page, and a five-second tab capture is a sound taken from a page. Retention is a separate
+question, answered separately. A disclosure that contradicts a manifest requesting
+`tabCapture` is exactly the mismatch that draws a rejection.

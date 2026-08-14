@@ -141,18 +141,27 @@ downside compounds while you work on the others.
 - ~~**Re-check `STALE_AFTER_MS`**~~ **Done 2026-08-11, left at 30s.** The concern was a
   free-tier cold start of ~50s tripping it; Render Starter does not spin down, and the
   deployed server answers in 0.67–1.1s. Revisit only if the instance type ever drops to Free.
-- **Delete the `debug` line** in `extension/src/popup/App.jsx`. It prints raw exception text and
-  must not ship. Tagged in the source.
-- **Lock CORS** in `server/src/index.js` to the published extension ID, which is fixed once
-  published. TODO already in place.
-- **Icons.** `manifest.json` currently declares none at all — no `icons` key, no
-  `action.default_icon`. Chrome is rendering a generated placeholder.
-- Privacy policy (legally required — we record audio). Covers what's captured, that it goes
-  to our server and to the fingerprinting provider, that audio is not retained, and what is.
-  Host on Owen-Site. Say **ACRCloud**, not AudD — the provider changed on 2026-08-08.
-- Store assets: 128×128 icon, 1280×800 screenshot, short + long descriptions. $5 one-time fee.
-  Take the screenshot *after* cover art works; a text-only result undersells it.
-- Minimize permissions — no `<all_urls>`. Reviewers reject unjustified breadth.
+- ~~**Delete the `debug` line**~~ **Done 2026-08-14.** Raw exception text is no longer
+  rendered anywhere. Nothing was lost by removing it: the full outcome object, `debug`
+  included, is still written to `chrome.storage.session`, which DevTools reads after the
+  fact. The popup's "Phase 1D" footer went with it.
+- ~~**Lock CORS**~~ **Mechanism done 2026-08-14, awaiting an ID.** `ALLOWED_EXTENSION_IDS`
+  (comma-separated, bare IDs) locks it; unset allows all, which is the dev default and is
+  announced at boot. Configured rather than hardcoded because the published ID does not exist
+  until the store issues it, and because it makes locking down a dashboard edit rather than a
+  deploy — which makes rolling back one too. Verified in both states.
+- ~~**Icons.**~~ **Done 2026-08-14.** 16/32/48/128 in `extension/public/icons/`, wired into
+  both `icons` and `action.default_icon`, cropped from Owen's 1024px source. `verify-dist.js`
+  now fails the build if any are missing — Chrome silently substitutes a generated letter
+  tile, so this is otherwise shippable without noticing.
+- ~~Privacy policy.~~ **Drafted 2026-08-14** in `docs/PRIVACY.md`, written against what the
+  code actually does rather than what it intends to. Still needs hosting on Owen-Site; the
+  store form validates that the URL loads. Says **ACRCloud**, not AudD.
+- ~~Store copy.~~ **Drafted 2026-08-14** in `docs/STORE-LISTING.md` — descriptions, single
+  purpose, per-permission justifications, and the data-usage checklist. Still needs the $5
+  registration and a 1280×800 screenshot, both of which only Owen can do.
+- ~~Minimize permissions~~ — **already minimal.** `tabCapture`, `offscreen`, `storage`,
+  `activeTab`, and one host permission. No `<all_urls>`, no content scripts, no site access.
 - Untested surfaces still outstanding from Phase 1: the Chrome Web Store page and the built-in
   PDF viewer. Both should hit `unsupported_page`; neither has been confirmed.
 
