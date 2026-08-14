@@ -16,8 +16,21 @@
     "type": "module"
   },
 
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+
   "action": {
     "default_popup": "popup.html",
-    "default_title": "TrackDown — identify this song"
+    "default_title": "TrackDown — identify this song",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
   }
 }

@@ -23,6 +23,20 @@ const manifest = JSON.parse(readFileSync(join(dist, 'manifest.json'), 'utf8'));
 check(manifest.background.service_worker, 'manifest.background.service_worker');
 check(manifest.action.default_popup, 'manifest.action.default_popup');
 
+// Icons are copied verbatim out of public/, so nothing in the build would notice one being
+// renamed or deleted. Chrome does not complain either — it silently substitutes a generated
+// letter tile, which looks enough like an icon that you can ship without realising yours is
+// gone. The Web Store rejects a submission missing the 128, so catch it here instead.
+for (const [size, path] of Object.entries(manifest.icons ?? {})) {
+  check(path, `manifest.icons["${size}"]`);
+}
+for (const [size, path] of Object.entries(manifest.action.default_icon ?? {})) {
+  check(path, `manifest.action.default_icon["${size}"]`);
+}
+if (!manifest.icons?.['128']) {
+  problems.push('manifest.icons is missing the 128 — the Web Store requires it');
+}
+
 // Every script/style the two HTML shells pull in. Vite writes these as root-absolute
 // paths, which resolve against the extension root at runtime.
 for (const html of ['popup.html', 'offscreen.html']) {
