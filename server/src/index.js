@@ -22,17 +22,42 @@ if (process.env.TRUST_PROXY) {
 // CORS. The extension's origin is chrome-extension://<id>. For an unpacked extension Chrome
 // derives that ID by hashing the absolute path of the loaded directory — so it is stable
 // across reloads on one machine, but differs for anyone who clones this repo somewhere else,
-// and differs again from the Web Store ID after publishing. Allowing all in dev avoids
-// baking one developer's ID into the server.
+// and differs again from the Web Store ID after publishing.
 //
 // Note this is belt-and-braces rather than load-bearing: an extension page fetching a host
-// listed in its own `host_permissions` is not subject to CORS in the first place. These
-// headers matter for curl and for any non-extension caller.
+// listed in its own `host_permissions` is not subject to CORS in the first place, so the
+// popup and the offscreen document reach us regardless of what is set below. These headers
+// govern curl and any non-extension caller — a web page that found the URL, mainly.
 //
-// TODO(Phase 2): lock this to the published extension ID before store submission. That ID
-// is fixed once published, so there is no reason to keep this open.
+// Configured rather than hardcoded because the published ID does not exist until the store
+// issues it, and because that makes locking down a dashboard edit rather than a deploy —
+// which also makes rolling it back one. Comma-separated bare IDs, no scheme:
+//
+//   ALLOWED_EXTENSION_IDS=abcdefghijklmnopabcdefghijklmnop
+//
+// Unset means allow everything, which is the right default for development and is announced
+// at boot so a production instance left open is visible in the logs rather than silent.
+const allowedOrigins = (process.env.ALLOWED_EXTENSION_IDS ?? '')
+  .split(',')
+  .map((id) => id.trim())
+  .filter(Boolean)
+  .map((id) => `chrome-extension://${id}`);
+
 app.use((req, res, next) => {
-  res.set('Access-Control-Allow-Origin', '*');
+  const origin = req.get('Origin');
+
+  if (allowedOrigins.length === 0) {
+    res.set('Access-Control-Allow-Origin', '*');
+  } else if (origin && allowedOrigins.includes(origin)) {
+    // Echoed, not listed: Access-Control-Allow-Origin takes one origin or `*`, never a set.
+    // Vary tells any cache in between that this response is origin-specific, or it will hand
+    // one caller's allow header to the next caller.
+    res.set('Access-Control-Allow-Origin', origin);
+    res.set('Vary', 'Origin');
+  }
+  // Otherwise no allow header at all, and the browser blocks it. Deliberately not a 403 —
+  // the request itself is fine, and a non-browser caller has no reason to be refused.
+
   res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.set('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.sendStatus(204);
@@ -74,4 +99,9 @@ app.listen(PORT, () => {
   // the counter was last reset, which is the first thing worth knowing when a deploy is
   // followed by a suspicious spike.
   console.log(`Daily identification budget: ${dailyBudget()}`);
+  console.log(
+    allowedOrigins.length > 0
+      ? `CORS locked to: ${allowedOrigins.join(', ')}`
+      : 'CORS open to all origins — set ALLOWED_EXTENSION_IDS before publishing',
+  );
 });
