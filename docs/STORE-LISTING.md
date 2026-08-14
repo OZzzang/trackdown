@@ -18,7 +18,10 @@ policy stays next to the code it describes with a public history of every change
 TrackDown
 ```
 
-**Short description** (132 char limit — this is the line shown in search results)
+**Summary / short description** — **not typed into the form.** The dashboard shows this as
+"Summary from package" and it is read-only: it comes from `description` in `manifest.json`,
+so changing it means editing the manifest, rebuilding, and uploading a new package. Limit is
+132 characters; ours is 105.
 
 ```
 Identify the background song playing in any browser tab. One click, five seconds, and you have the track.

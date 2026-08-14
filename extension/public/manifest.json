@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "TrackDown",
   "version": "1.0.0",
-  "description": "Identify the background song playing in any browser tab.",
+  "description": "Identify the background song playing in any browser tab. One click, five seconds, and you have the track.",
 
   "permissions": [
     "tabCapture",
