@@ -17,7 +17,11 @@ const PROVIDERS = {
   acr: acrcloud,
 };
 
-const DEFAULT_PROVIDER = 'audd';
+// Was `audd` until 2026-08-14. The trial expired on 2026-08-08, so the old default meant an
+// unset PROVIDER booted cleanly into a provider that could no longer answer — a 502 on the
+// first identification, from a server that reported itself healthy. Defaulting to the one
+// that actually works makes the failure mode a missing credential, which says so at boot.
+const DEFAULT_PROVIDER = 'acrcloud';
 
 export function selectProvider() {
   const configured = (process.env.PROVIDER ?? DEFAULT_PROVIDER).toLowerCase();
