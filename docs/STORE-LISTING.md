@@ -3,8 +3,10 @@
 Everything the listing form asks for, written out so submission is copy-paste rather than
 composition. Fields are in roughly the order the dashboard presents them.
 
-Privacy policy lives in `PRIVACY.md` and must be hosted at a public URL before submitting —
-the form validates that it loads.
+The form requires a publicly reachable privacy policy URL and validates that it loads. That
+is already satisfied: the repo is public, so `PRIVACY.md` is served at
+<https://github.com/OZzzang/trackdown/blob/main/docs/PRIVACY.md>. Nothing to host, and the
+policy stays next to the code it describes with a public history of every change to it.
 
 ---
 
@@ -74,7 +76,7 @@ never stored — not on disk, not in a database, not after the request finishes.
 
 There are no accounts, no analytics, no tracking, and no advertising.
 
-Full policy: <PRIVACY POLICY URL>
+Full policy: https://github.com/OZzzang/trackdown/blob/main/docs/PRIVACY.md
 
 KNOWN LIMITS
 
@@ -86,7 +88,8 @@ KNOWN LIMITS
   for any fingerprinting service.
 ```
 
-> Replace `<PRIVACY POLICY URL>` with the hosted URL before pasting.
+> The policy URL above is live — the repo is public, so `docs/PRIVACY.md` serves itself.
+> Paste the same URL into the form's own privacy policy field.
 
 ---
 
@@ -224,8 +227,8 @@ screenshot of the page it was taken on rather than upscaling it.
 
 ## Before submitting
 
-- [ ] Host `PRIVACY.md` and paste the URL into both the listing form and the detailed
-      description.
+- [x] ~~Host `PRIVACY.md`.~~ Public repo, so it is already served at its GitHub URL.
+      Still needs pasting into the form's privacy policy field.
 - [ ] Decide the version number. `manifest.json` says `0.1.0`; a public launch usually reads
       as `1.0.0`. The store only requires that it increase on each update.
 - [ ] `npm run build` from `extension/`, then zip **`extension/dist/`** — the build output,

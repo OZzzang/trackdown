@@ -154,7 +154,9 @@ still spends budget. Verified by curl in all three states and its copy confirmed
 `docs/STORE-LISTING.md` are drafted. What remains needs an account, a payment, a screenshot or
 a hosted URL — not more code:
 
-- Host `docs/PRIVACY.md` on Owen-Site; the store form validates that the URL loads.
+- ~~Host `docs/PRIVACY.md`.~~ **Already hosted** — the repo is public, so
+  `https://github.com/OZzzang/trackdown/blob/main/docs/PRIVACY.md` is a valid store policy
+  URL. No separate site needed; the policy lives beside the code it describes.
 - Register on the Web Store ($5) and submit `extension/dist/` zipped — the build output, not
   the source directory.
 - A 1280×800 screenshot. `docs/STORE-LISTING.md` says which three shots are worth taking.

@@ -155,8 +155,10 @@ downside compounds while you work on the others.
   now fails the build if any are missing — Chrome silently substitutes a generated letter
   tile, so this is otherwise shippable without noticing.
 - ~~Privacy policy.~~ **Drafted 2026-08-14** in `docs/PRIVACY.md`, written against what the
-  code actually does rather than what it intends to. Still needs hosting on Owen-Site; the
-  store form validates that the URL loads. Says **ACRCloud**, not AudD.
+  code actually does rather than what it intends to. Says **ACRCloud**, not AudD. **Hosting
+  is done** — the repo is public, so the file's own GitHub URL satisfies the store, which asks
+  only for a publicly reachable policy. The earlier "host it on Owen-Site" note was an
+  assumption from the first draft of this plan that was never checked and never true.
 - ~~Store copy.~~ **Drafted 2026-08-14** in `docs/STORE-LISTING.md` — descriptions, single
   purpose, per-permission justifications, and the data-usage checklist. Still needs the $5
   registration and a 1280×800 screenshot, both of which only Owen can do.
