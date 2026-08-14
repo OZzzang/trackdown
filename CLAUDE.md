@@ -108,8 +108,15 @@ never runs.
 
 ## Current phase
 
-**Phase 2 — ship it.** Phases 0 through 1D are complete; see `docs/DECISIONS.md`. 1C ran
-before 1B deliberately; the reasoning is recorded there. Run the server with `npm run dev`
+**Phase 2 is closed — v1.0.0 was submitted to the Chrome Web Store on 2026-08-14 and is
+awaiting review.** Phases 0 through 2 are complete; see `docs/DECISIONS.md`. 1C ran
+before 1B deliberately; the reasoning is recorded there. **Next up is Phase 3 (history)** —
+`PLAN.md` deliberately schedules it during review, since updates can ship while a submission
+is pending and the review clock is the one thing that cannot be shortened.
+
+Two items are blocked on the store issuing a permanent extension ID: setting
+`ALLOWED_EXTENSION_IDS` in the Render dashboard, and running one identification through the
+published build. Run the server with `npm run dev`
 from `server/` while working on the extension — the extension has no offline path.
 
 Phase 1D closed on 2026-08-08, verified in the browser end to end. The popup is a pure

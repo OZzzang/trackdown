@@ -199,6 +199,21 @@ If you ever revisit this, the two things worth knowing:
 **Submit here, before Phases 3–4.** Review takes days to weeks and is the one thing that
 can't be sped up. Updates can ship while it's pending.
 
+### Submitted 2026-08-14 — v1.0.0
+
+Phase 2 is closed. Everything above shipped, the listing is filled in, and the package is
+with Google. Waiting on review, which is the one part of this project nobody can accelerate.
+
+Two follow-ups are blocked on the store issuing a permanent extension ID:
+
+- Set `ALLOWED_EXTENSION_IDS` to it in the Render dashboard. A dashboard edit, not a deploy.
+- Install the published copy and run one identification through it — the first time the
+  *published* ID talks to the server rather than an unpacked one.
+
+And one number to keep an eye on: `DAILY_IDENTIFY_BUDGET` is 500/day across all users, which
+is roughly 100 people doing five searches. ACRCloud bills per call, so that is the exposure
+ceiling, not a performance setting.
+
 ---
 
 ## Phase 3 — History
