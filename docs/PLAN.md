@@ -164,8 +164,15 @@ downside compounds while you work on the others.
   registration and a 1280×800 screenshot, both of which only Owen can do.
 - ~~Minimize permissions~~ — **already minimal.** `tabCapture`, `offscreen`, `storage`,
   `activeTab`, and one host permission. No `<all_urls>`, no content scripts, no site access.
-- Untested surfaces still outstanding from Phase 1: the Chrome Web Store page and the built-in
-  PDF viewer. Both should hit `unsupported_page`; neither has been confirmed.
+- ~~The built-in PDF viewer.~~ **Tested 2026-08-14, and the expectation here was wrong.** It
+  does *not* hit `unsupported_page`: Chrome captures a PDF-viewer tab perfectly well.
+  `getMediaStreamId` succeeds, the offscreen document records, and the exactly-zero silence
+  check returns `no_audio` at 1.2s. It was never an unsupported surface — just a page with no
+  sound, which the silence tier already covered. Nothing to fix.
+- **The Chrome Web Store page is still untested.** Unlike the PDF viewer this one is a real
+  special case — Chrome blocks extensions from it so none can interfere with installing or
+  removing another — and `blockedReason()` has a dedicated branch for it that has never been
+  exercised.
 
 ### Cover art — done 2026-08-11, via the iTunes Search API
 

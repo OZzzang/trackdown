@@ -82,7 +82,9 @@ async function startCapture() {
   // activeTab — granted by the popup click — is what fills in `url`.
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab) return { ok: false, reason: 'no_tab', message: 'No active tab.' };
-  console.log('[TrackDown] 1/4 tab:', tab.id, tab.url);
+  // mutedInfo carries a `reason` — "user", "capture" or "extension" — and which one it is
+  // separates a tab the user muted from one our own capture muted and failed to restore.
+  console.log('[TrackDown] 1/4 tab:', tab.id, tab.url, JSON.stringify(tab.mutedInfo));
 
   const blocked = blockedReason(tab.url);
   if (blocked) return { ok: false, reason: 'unsupported_page', message: blocked };

@@ -632,3 +632,17 @@ Chrome defines the category as text, images, **sounds**, video or hyperlinks tak
 page, and a five-second tab capture is a sound taken from a page. Retention is a separate
 question, answered separately. A disclosure that contradicts a manifest requesting
 `tabCapture` is exactly the mismatch that draws a rejection.
+
+**2026-08-14 — The PDF viewer is not an unsupported surface, and never was.** `PLAN.md` had
+listed it since Phase 1B alongside `chrome://` and the Web Store as a page that should refuse
+with `unsupported_page`. Tested against an online PDF and the assumption is simply false:
+`getMediaStreamId` succeeds, the offscreen document records, and the exactly-zero silence
+check answers `no_audio` at 1.2s. A PDF is a page with no sound, which the silence tier
+already handled — there was never a special case to write.
+
+Worth noting how it presented, because it looked like a bug for a moment. `no_audio`'s detail
+reads "Start the video, or unmute it, and try again", which is easy to read back as the muted
+message. `mutedInfo` was logged to settle it and came back `{"muted":false}`, which ruled out
+the muted guard in one round trip rather than by argument. The copy stays as it is: "start the
+video" is right for YouTube, Reels and TikTok, and generalising it to suit PDFs would make the
+common case worse to fix a case that is already answered correctly.
