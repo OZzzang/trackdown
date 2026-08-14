@@ -233,6 +233,47 @@ Routes: `GET /api/history` (paginated), `DELETE /api/history/:id`, `DELETE /api/
 
 Compound index `{ deviceId: 1, identifiedAt: -1 }` matching the access pattern.
 
+### Starting state, as of 2026-08-14
+
+Nothing here is built. Verified, not assumed:
+
+- **No database driver is installed.** `server/package.json` has exactly three dependencies:
+  `express`, `express-rate-limit`, `multer`.
+- **`MONGODB_URI` in `server/.env` is empty, and no Atlas cluster exists.** Creating one needs
+  Owen's account — it is the first blocker, and it is not a coding task.
+- **No `deviceId` or `chrome.storage.local` code exists** anywhere in the extension. The
+  `storage` permission is already in the manifest, so no permission change is needed.
+- `chrome.storage.local` is the right home for the install-time UUID — `session` is cleared
+  when the browser closes, which would hand a user a new identity every morning.
+
+### Two things to do before writing any Phase 3 code
+
+**1. Do not upload a new package until v1.0.0 is approved.** Uploading while the first
+submission is still pending replaces it and restarts the review clock. Build and test Phase 3
+locally by all means; just do not push it to the store until the listing is live. Note this
+corrects the looser "updates can ship while it's pending" line in Phase 2 above, which is true
+of a *published* item and not of one awaiting first review.
+
+**2. `docs/PRIVACY.md` must be revised before history ships, not after.** The policy currently
+makes two statements that history would falsify:
+
+- *"TrackDown keeps no database of any kind today."*
+- *"A future version of TrackDown plans to add an optional history of your identifications;
+  if that ships, this policy will be revised **before** it does, and the history will be under
+  your control with a way to clear it."*
+
+That is a promise in a published privacy policy, which makes it a real obligation rather than
+a nicety, and it constrains the design: `DELETE /api/history` (clear-all) is not an optional
+nice-to-have, it is what makes the policy true. The store listing's detailed description
+survives unchanged — it promises the *audio clip* is never stored, which stays accurate, since
+only the resulting metadata would be persisted.
+
+### Worth folding in while you are there
+
+`middleware/circuitBreaker.js:17` already flags itself: the daily counter is in-memory, so it
+resets on every deploy and is not shared across instances. Phase 3 brings a database for other
+reasons, which is the moment that becomes cheap to fix. Optional, not required.
+
 ---
 
 ## Phase 4 — Spotify OAuth

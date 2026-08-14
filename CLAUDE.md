@@ -116,7 +116,21 @@ is pending and the review clock is the one thing that cannot be shortened.
 
 Two items are blocked on the store issuing a permanent extension ID: setting
 `ALLOWED_EXTENSION_IDS` in the Render dashboard, and running one identification through the
-published build. Run the server with `npm run dev`
+published build.
+
+**Starting Phase 3? Read `docs/PLAN.md` § Phase 3 first — it carries the handoff.** The three
+things that are not obvious from the code:
+
+- **Do not upload a new package to the store until v1.0.0 is approved.** Uploading while the
+  first submission is pending replaces it and restarts the review clock. Build and test Phase
+  3 locally; ship it after the listing goes live.
+- **`docs/PRIVACY.md` must be revised *before* history ships.** The published policy says
+  TrackDown keeps no database, and explicitly promises to be updated before any history
+  feature arrives. That also makes `DELETE /api/history` (clear-all) load-bearing rather than
+  optional — it is what keeps the policy true.
+- **Nothing is built and the first blocker is not code.** No database driver is installed
+  (`server/package.json` has only `express`, `express-rate-limit`, `multer`), `MONGODB_URI` is
+  empty, and no Atlas cluster exists — creating one needs Owen's account. Run the server with `npm run dev`
 from `server/` while working on the extension — the extension has no offline path.
 
 Phase 1D closed on 2026-08-08, verified in the browser end to end. The popup is a pure
