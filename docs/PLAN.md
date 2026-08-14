@@ -169,10 +169,11 @@ downside compounds while you work on the others.
   `getMediaStreamId` succeeds, the offscreen document records, and the exactly-zero silence
   check returns `no_audio` at 1.2s. It was never an unsupported surface — just a page with no
   sound, which the silence tier already covered. Nothing to fix.
-- **The Chrome Web Store page is still untested.** Unlike the PDF viewer this one is a real
-  special case — Chrome blocks extensions from it so none can interfere with installing or
-  removing another — and `blockedReason()` has a dedicated branch for it that has never been
-  exercised.
+- ~~The Chrome Web Store page.~~ **Confirmed 2026-08-14** — refuses with `unsupported_page`.
+  It is an ordinary `https://` page, so the scheme list cannot catch it and the hostname
+  branch in `blockedReason()` is the only thing that can produce that outcome for it.
+
+**Every surface named in Phases 1B and 1D has now been exercised in a real browser.**
 
 ### Cover art — done 2026-08-11, via the iTunes Search API
 

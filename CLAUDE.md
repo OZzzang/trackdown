@@ -161,10 +161,11 @@ a hosted URL — not more code:
   the source directory.
 - A 1280×800 screenshot. `docs/STORE-LISTING.md` says which three shots are worth taking.
 - Once the store issues an ID, set `ALLOWED_EXTENSION_IDS` in the Render dashboard.
-- Still unconfirmed from Phase 1: **the Chrome Web Store page**, which `blockedReason()` has a
-  dedicated branch for that has never been exercised. The **PDF viewer was tested 2026-08-14
-  and is not an unsupported surface at all** — Chrome captures it, and it resolves as
-  `no_audio` in 1.2s. `chrome://` pages were confirmed the same day.
+- **No untested surfaces remain.** On 2026-08-14 `chrome://` pages and the Chrome Web Store
+  were both confirmed to refuse with `unsupported_page`, closing the last two rows carried
+  since Phase 1B. The **PDF viewer turned out not to be an unsupported surface at all** —
+  Chrome captures it fine and it resolves as `no_audio` in 1.2s, so the long-standing
+  expectation that it should hit `unsupported_page` was simply wrong.
 
 Of the four things 1D left for Phase 2, all four are now closed:
 

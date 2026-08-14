@@ -646,3 +646,14 @@ message. `mutedInfo` was logged to settle it and came back `{"muted":false}`, wh
 the muted guard in one round trip rather than by argument. The copy stays as it is: "start the
 video" is right for YouTube, Reels and TikTok, and generalising it to suit PDFs would make the
 common case worse to fix a case that is already answered correctly.
+
+**2026-08-14 — Last untested surfaces closed: `chrome://` and the Chrome Web Store both
+refuse.** Both return `unsupported_page`, which is what `blockedReason()` exists to produce
+before `getMediaStreamId` throws a message that never says which rule was hit. The Web Store
+is the more interesting of the two: it is an ordinary `https://` page, so the scheme list
+cannot catch it and the hostname branch is the only path to that outcome — Chrome blocks
+extensions from it so that none can interfere with installing or removing another.
+
+With the PDF viewer resolved as `no_audio` rather than a blocked surface, every situation
+named in the Phase 1B failure list and the Phase 1D table has now been exercised in a real
+browser.
