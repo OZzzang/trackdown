@@ -27,7 +27,15 @@ so changing it means editing the manifest, rebuilding, and uploading a new packa
 Identify the background song playing in any browser tab. One click, five seconds, and you have the track.
 ```
 
-**Category:** Tools
+**Category:** Entertainment
+
+Chosen over a general utility category deliberately. The primary function is identifying
+music, and Chrome asks you to categorize by function rather than by mechanism — but the
+practical reason is discovery: the utility bucket is the largest on the store and a new
+listing vanishes into it, while Entertainment puts TrackDown beside the media extensions its
+audience already runs. Note Google has reshuffled these categories, so the dropdown may offer
+"Functionality & UI" where older docs say "Tools"; take whatever it actually lists.
+
 **Language:** English (United States)
 
 **Detailed description**
