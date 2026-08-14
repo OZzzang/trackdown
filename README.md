@@ -11,6 +11,8 @@ between the screen and a microphone.
 **Status: v1.0.0, feature-complete and submitted to the Chrome Web Store.**
 The API server is deployed and live.
 
+![TrackDown identifying a song playing in a YouTube tab](docs/store-assets/screenshot-1-result.png)
+
 ## How it works
 
 ```

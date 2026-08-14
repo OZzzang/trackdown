@@ -218,9 +218,19 @@ for the duration of the request and is never stored.
 | Asset | Size | Status |
 |---|---|---|
 | Store icon | 128×128 PNG | **Done** — `extension/public/icons/icon-128.png` |
-| Screenshot | 1280×800 PNG | **Needed** — at least one, up to five |
-| Small promo tile | 440×280 PNG | Optional |
-| Marquee promo tile | 1400×560 PNG | Optional |
+| Screenshots ×3 | 1280×800 PNG | **Done** — `docs/store-assets/`, upload in filename order |
+| Small promo tile | 440×280 PNG | Skipped — only affects featured placement |
+| Marquee promo tile | 1400×560 PNG | Skipped — same |
+
+The three screenshots are kept in the repo rather than only in the listing, because the
+listing is not a place you can read them back out of, and regenerating them means recreating
+the exact browser state as well as the crop. `screenshot-1-result.png` is also the README's
+hero image.
+
+Shots 2 and 3 are the popup padded onto a dark canvas at **native resolution rather than
+upscaled** — they were captured as ~640×340 crops, which is a 2× Retina rendering of a 320px
+popup, so scaling them to 1280 wide would have doubled them again and visibly softened the
+text. Shot 1 is a full browser window cropped to 16:10.
 
 Screenshots are what actually sell the listing, and one is enough to submit. Worth capturing,
 in order of value:
