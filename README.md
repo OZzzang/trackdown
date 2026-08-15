@@ -1,14 +1,19 @@
 # TrackDown
 
-Identify the background song in any browser tab — YouTube, Instagram Reels, TikTok — from a
-single click.
+Identify music playing in a browser tab from a single click.
 
-Shazam works by holding a phone up to a speaker. That fails on exactly the case that matters
-most: someone talking over quiet background music in a vlog. TrackDown takes the audio
-straight from the tab, so there is no room noise, no speaker distortion, and nothing lost
-between the screen and a microphone.
+Holding a phone up to a speaker puts a room in between: noise, speaker distortion, and
+whatever the microphone loses on the way. TrackDown takes the audio straight from the tab
+instead, so the fingerprinter gets the signal the page actually rendered.
 
-**Status: v1.0.0, feature-complete and submitted to the Chrome Web Store.**
+What it does not do is beat the physics of the problem. Fingerprinting is a catalogue
+lookup — live versions, covers and remixes are often simply not in it, and quiet background
+music underneath speech is the hardest case there is. TrackDown reports a no-match plainly
+rather than guessing, and hedges every result it does return.
+
+**Status: v1.0.0, feature-complete, listing revised for resubmission 2026-08-15**
+after a rejection under the store's "Inaccurate Description" policy — the listing had
+promised background-music identification as its headline case. See `docs/STORE-LISTING.md`.
 The API server is deployed and live.
 
 ![TrackDown identifying a song playing in a YouTube tab](docs/store-assets/screenshot-1-result.png)

@@ -108,11 +108,29 @@ never runs.
 
 ## Current phase
 
-**Phase 2 is closed — v1.0.0 was submitted to the Chrome Web Store on 2026-08-14 and is
-awaiting review.** Phases 0 through 2 are complete; see `docs/DECISIONS.md`. 1C ran
-before 1B deliberately; the reasoning is recorded there. **Next up is Phase 3 (history)** —
-`PLAN.md` deliberately schedules it during review, since updates can ship while a submission
-is pending and the review clock is the one thing that cannot be shortened.
+**Phase 2 is closed — v1.0.0 went to the Chrome Web Store on 2026-08-14 and was rejected
+twice, neither time for a code defect.** Phases 0 through 2 are complete; see
+`docs/DECISIONS.md`. 1C ran before 1B deliberately; the reasoning is recorded there. **Next
+up is Phase 3 (history)** — `PLAN.md` deliberately schedules it during review, since updates
+can ship while a submission is pending and the review clock is the one thing that cannot be
+shortened.
+
+Both rejections are written up under 2026-08-15 in `docs/DECISIONS.md`. Two rules came out of
+them, and both are easy to violate again:
+
+- **A corrected package goes to the *existing* store item.** Uploading a new zip to the item
+  you already have costs you the review clock. Creating a *second* item for the same
+  extension is a Spam violation (duplicate functionality), and it cannot be taken back —
+  the store has no delete, only archive, and an archived item is still on the account.
+- **Listing copy is tested against the implementation, or it is a claim.** The second
+  rejection quoted `"Identify the background song"` — the manifest `description`, which the
+  store surfaces as the read-only Summary — as functionality it could not reproduce. The
+  pipeline was verified healthy end to end at the time; the listing had simply promised the
+  hardest case fingerprinting faces as its headline, plus unconditional cover art, an
+  unsubstantiated catalogue size, and operation on a muted tab. **Before changing
+  user-facing copy anywhere — `manifest.json`, `docs/STORE-LISTING.md`, `README.md` — check
+  the claim against what the code actually guarantees.** The four that were wrong are listed
+  in `DECISIONS.md`.
 
 Two items are blocked on the store issuing a permanent extension ID: setting
 `ALLOWED_EXTENSION_IDS` in the Render dashboard, and running one identification through the

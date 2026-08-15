@@ -657,3 +657,50 @@ extensions from it so that none can interfere with installing or removing anothe
 With the PDF viewer resolved as `no_audio` rather than a blocked surface, every situation
 named in the Phase 1B failure list and the Phase 1D table has now been exercised in a real
 browser.
+
+---
+
+**2026-08-15 — Rejected twice: Spam, then Inaccurate Description. Neither was a code defect.**
+
+The first rejection (notification `Yellow Nickel`) cited the Spam policy's duplicate-items
+clause. Cause: the initial submission went up with the wrong zip, and the correction was made
+by creating a **second store item** rather than uploading a new package to the existing one.
+Two items carrying the same extension is the duplicate-functionality case, and archiving the
+first does not undo it — the Chrome Web Store has no delete for items, so archiving is the
+furthest removal available and the item still exists on the account. Resolved by appeal
+naming both item IDs.
+
+The rule worth carrying: **a corrected package goes to the existing item.** Re-uploading
+costs the review clock, which is recoverable; creating a second item is a policy violation,
+which is not. `CLAUDE.md` had warned only about the clock.
+
+The second rejection (`Red Nickel` / `Red Potassium` / `Red Silicon`, item
+`laeakijpppkgjfoaaahblbhkobkodjpm`) quoted `"Identify the background song"` as functionality
+that was not reproducible. That string is the manifest's `description`, which the store shows
+as the read-only Summary.
+
+Verified the pipeline before touching anything, because "not working" deserved a real check:
+`clip.webm` against production returned a correct match with artwork and confidence 85 in
+1.0s, `/health` answered in 0.2s with `provider: acrcloud`, and the built `dist/` carried the
+Render origin in both `host_permissions` and the bundle with no `localhost` anywhere. Nothing
+was broken. The listing was.
+
+Four claims came out, each an overpromise rather than a lie:
+
+- **"the *background* song in *any* browser tab."** Quiet music under speech is the hardest
+  case any fingerprinting service faces — the old copy said so itself, in its last line,
+  having sold it in the first. `any` was wrong too: `chrome://` and the Web Store refuse.
+- **"shows you the title, the artist, and the cover art."** `services/artwork.js` declines a
+  candidate that does not match on title *and* artist, so a minority of results are
+  deliberately bare. Now "when it can be confirmed".
+- **"a catalogue of millions of tracks."** The provider's claim, restated as ours.
+- **"keeps working when your volume is down."** False as written. Quiet speakers are fine; a
+  **muted tab** is refused up front by the `mutedInfo` guard — and "volume is down" is
+  precisely how a user would describe having muted a tab.
+
+The PDF viewer also came out of the stated limits, per 2026-08-14 above. Claiming a
+restriction that does not exist is an inaccurate description too, in the harmless direction.
+
+The generalisation: this listing described the product as its author hoped it behaved, and
+every gap between that and the measured behaviour was a rejection waiting to be written.
+Copy is tested against the implementation, or it is a claim.

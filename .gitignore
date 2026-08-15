@@ -31,3 +31,6 @@ npm-debug.log*
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Store submission packages — build artifacts, rebuilt per submission
+*.zip

@@ -21,11 +21,18 @@ TrackDown
 **Summary / short description** — **not typed into the form.** The dashboard shows this as
 "Summary from package" and it is read-only: it comes from `description` in `manifest.json`,
 so changing it means editing the manifest, rebuilding, and uploading a new package. Limit is
-132 characters; ours is 105.
+132 characters; ours is 114.
 
 ```
-Identify the background song playing in any browser tab. One click, five seconds, and you have the track.
+Identify music playing in a browser tab. Click once, TrackDown listens for five seconds and searches for a match.
 ```
+
+**Rewritten 2026-08-15 after the "Inaccurate Description" rejection.** The previous summary
+read "Identify the background song playing in any browser tab" — and the reviewer quoted
+`"Identify the background song"` back as the functionality they could not reproduce. Two
+separate overclaims in one sentence: *background* song is the single hardest case for any
+fingerprinting service, and *any* browser tab is false, since Chrome blocks capture on
+`chrome://` pages and the Web Store. The replacement promises a search, not a result.
 
 **Category:** Entertainment
 
@@ -41,41 +48,43 @@ audience already runs. Note Google has reshuffled these categories, so the dropd
 **Detailed description**
 
 ```
-Ever hear a song in a YouTube vlog, a TikTok, or an Instagram Reel and have no idea what it
-is? TrackDown tells you — without reaching for your phone.
+TrackDown identifies music playing in a browser tab. Click the icon while a song is audible,
+and it listens for five seconds, then searches an audio-fingerprinting catalogue for a match.
 
-Click the TrackDown icon while the audio is playing. It listens to the tab for five seconds,
-matches it against a catalogue of millions of tracks, and shows you the title, the artist,
-and the cover art.
+HOW TO USE IT
 
-HOW IT WORKS
-
-1. Play the video or track you want identified.
+1. Play a video or track with music that is currently audible.
 2. Click the TrackDown icon.
-3. Wait five seconds.
+3. Wait five seconds for the result.
 
-That's it. No account, no sign-up, nothing to configure.
+No account, no sign-up, nothing to configure.
 
-WHY IT'S DIFFERENT
+WHAT IT DOES WELL
 
-Holding your phone up to your laptop speakers works badly, and it fails completely when
-someone is talking over the music — which, on social video, is most of the time. TrackDown
-takes the audio straight from the tab, so there is no room noise, no speaker distortion, and
-nothing lost between your screen and a microphone.
+TrackDown reads audio directly from the tab instead of through a microphone, so nothing is
+lost to room noise or speaker distortion between the source and the match. Studio recordings
+— music videos, official uploads, radio streams, playlists — are what audio fingerprinting
+handles best, and they are what TrackDown is built for.
 
-It also keeps working when your volume is down: TrackDown reads the tab's audio directly
-rather than listening to the room.
+WHAT IT WILL NOT ALWAYS DO
 
-BUILT TO BE HONEST
+Audio fingerprinting is a catalogue lookup, not a guarantee, and TrackDown does not pretend
+otherwise:
 
-Song identification is not a certainty, and TrackDown does not pretend otherwise. Results are
-shown as a best match, because fingerprinting services can match audio correctly and still
-report a mislabeled title from a bad catalogue entry. Live versions, covers and remixes often
-are not in the database at all — TrackDown says so plainly instead of guessing.
+- Live versions, covers, remixes and DJ edits are frequently not in the catalogue at all, and
+  will come back with no match.
+- Quiet background music underneath speech is the hardest case for any fingerprinting
+  service, and will sometimes come back with no match.
+- Results are shown as a best match. Fingerprinting services can match audio correctly and
+  still report a mislabeled title from a bad catalogue entry.
+- Cover art is shown when it can be confirmed against both the title and the artist.
+  Otherwise you get the result without an image, rather than a stranger's album cover.
 
-The same goes for cover art. If the artwork lookup cannot confirm both the title and the
-artist, you get the result without an image rather than an album cover belonging to someone
-else's record.
+WHERE IT CANNOT LISTEN
+
+Chrome does not allow any extension to capture audio on chrome:// pages or on the Chrome Web
+Store. A muted or paused tab produces no audio to identify, and TrackDown says so plainly
+rather than failing silently.
 
 PRIVACY
 
@@ -88,16 +97,27 @@ never stored — not on disk, not in a database, not after the request finishes.
 There are no accounts, no analytics, no tracking, and no advertising.
 
 Full policy: https://github.com/OZzzang/trackdown/blob/main/docs/PRIVACY.md
-
-KNOWN LIMITS
-
-- Chrome does not allow any extension to capture audio on chrome:// pages, the Chrome Web
-  Store, or the built-in PDF viewer.
-- A muted or paused tab produces no audio to identify. TrackDown tells you rather than
-  failing silently.
-- Speech over music works, but heavy talking over quiet background music is the hardest case
-  for any fingerprinting service.
 ```
+
+**Rewritten 2026-08-15**, same rejection. What changed and why each mattered:
+
+- **The opening no longer sells the hardest case.** It led with "a song in a YouTube vlog, a
+  TikTok, or an Instagram Reel" — quiet background music under speech, which the old copy
+  then admitted at the bottom was the hardest case for any fingerprinting service. The
+  listing promised in paragraph one what it disclaimed in the last line.
+- **"shows you the title, the artist, and the cover art"** promised artwork unconditionally.
+  Artwork resolves for most official releases and a minority come back bare, by design —
+  `services/artwork.js` declines a near-miss rather than guessing.
+- **"a catalogue of millions of tracks"** is a number we cannot substantiate; it is the
+  provider's claim, not ours.
+- **"It also keeps working when your volume is down"** was outright false as written. Turning
+  the *speakers* down is fine, but a **muted tab** is refused up front — and "volume down" is
+  exactly how a user would describe muting a tab.
+- **The PDF viewer was removed from the limits.** It was never a real limitation: 2026-08-14
+  testing found Chrome captures it fine (`docs/DECISIONS.md`). Claiming a restriction that
+  does not exist is an inaccurate description too, just in the harmless direction.
+- **Limits moved up, above privacy**, and given a heading of their own. A reviewer who reads
+  only the first screen now sees what a no-match means before they see it happen.
 
 > The policy URL above is live — the repo is public, so `docs/PRIVACY.md` serves itself.
 > Paste the same URL into the form's own privacy policy field.
